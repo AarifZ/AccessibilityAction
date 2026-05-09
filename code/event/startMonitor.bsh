@@ -42,6 +42,7 @@ startMonitor() {
 					// Now running on "a11E_x" thread
 					This a11E = tasker.getJavaVariable("a11E");
 					int eventType = accessibilityEvent.getEventType();
+					String packageName = accessibilityEvent.getPackageName();
 					
 					if (a11E == null || a11E == void || a11E.isMuted()) {
 						accessibilityEvent.recycle();
@@ -51,10 +52,14 @@ startMonitor() {
 					if (!a11E.eventList.contains(eventType)) {
 						accessibilityEvent.recycle();
 						return;
+					} else {
+						List packageList = a11E.eventMap.get(eventType);
+						if (packageList != null && !packageList.contains(packageName)) {
+							accessibilityEvent.recycle();
+							return;
+						}
 					}
 					
-
-					// [Remainder of your accept logic remains untouched as requested]
 					a11E.event = accessibilityEvent;
 					a11E.node = accessibilityEvent.getSource();
 

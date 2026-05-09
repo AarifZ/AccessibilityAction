@@ -53,6 +53,7 @@ a11E() {
 	List history = new ArrayList();
 	Map listeners = new HashMap();
 	List eventList = new ArrayList();
+	Map eventMap = new HashMap();
 
 	boolean isMuted;
 	public String toConstant(String methodName) {
@@ -81,6 +82,7 @@ a11E() {
 			if (!disposable.isDisposed()) {
 				disposable.dispose();
 				eventList.clear();
+				eventMap.clear();
 				listeners.clear();
 			}
 		}
@@ -88,6 +90,7 @@ a11E() {
 
 	updateEventList() {
 		eventList.clear();
+		eventMap.clear();
 		if (listeners.isEmpty()) {
 			removeEvents();
 			return;
@@ -96,9 +99,24 @@ a11E() {
 		for (String key: listeners.keySet()) {
 			This listener = listeners.get(key);
 			if (listener.EVENT_TYPES != void) {
-				Set keyset = listener.EVENT_TYPES.keySet();
-				eventList.addAll(new ArrayList(keyset));
+				Set eventTypes = listener.EVENT_TYPES.keySet();
+				eventList.addAll(new ArrayList(eventTypes));
+				if (listener.PackageName != void && eventTypes.size() > 0) {
+					Iterator eventTypesIterator = eventTypes.iterator();
+					while (eventTypesIterator.hasNext()) {
+						int eventType = eventTypesIterator.next();
+						List packageList = eventMap.get(eventType);
+						if (packageList == null) {
+							packageList = new ArrayList();
+							eventMap.put(eventType, packageList);
+						}
+						packageList.add(listener.PackageName);
+						packageList = packageList.stream().distinct().collect(Collectors.toList());						
+					}
+					
+				}
 			}
+
 		}
 		eventList = eventList.stream().distinct().collect(Collectors.toList());
 		if (!eventList.isEmpty()) {
@@ -107,6 +125,7 @@ a11E() {
 			}
 		}
 	}
+
 	setEventTypes(This THIS) {
 		AccessibilityEvent event = new AccessibilityEvent();
 		List ignored = Arrays.asList(new String[] { "condition", "Source" });
@@ -161,5 +180,10 @@ a11E() {
 	isMuted() {
 		return isMuted;
 	}
+
+	get(String eventId) {
+		return listeners.get(eventId);
+	}
+	
 	return this;
 }
