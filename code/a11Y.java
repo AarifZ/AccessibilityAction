@@ -43,6 +43,7 @@ a11Y() {
 	This TOP;
 	String scriptEditor = "";
 	This inspector;
+	String LOG_FILE;
 
 	ThreadFactory customThreadFactory = new ThreadFactory() {
 		private AtomicInteger count = new AtomicInteger(0);
@@ -112,6 +113,7 @@ a11Y() {
 
 	setEnv(String path) {
 		ENV = path;
+		LOG_FILE = path + "/log.txt";
 	}
 
 	resetEnv() {
