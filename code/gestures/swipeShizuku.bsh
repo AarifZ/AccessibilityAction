@@ -126,3 +126,7 @@ boolean swipeShizuku(double startY, double endY) {
 boolean swipeShizuku(double startY, double endY, boolean stopFlick) {
 	return swipeShizuku(0.5, startY, 0.5, endY, 10, stopFlick);
 }
+
+boolean swipeShizuku(double startY, double endY, long duration) {
+	return swipeShizuku(0.5, startY, 0.5, endY, duration, false);
+}
