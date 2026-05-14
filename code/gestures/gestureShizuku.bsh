@@ -146,8 +146,12 @@ public boolean gestureShizuku(Object[][] points, Paint paint) {
 		return false;
 	}
 
+
+
 }
 
+
+/* Overloaded method */
 public boolean gestureShizuku(Object[][] points) {
 	return gestureShizuku(points, null);
 }
