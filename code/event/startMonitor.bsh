@@ -64,9 +64,9 @@ startMonitor() {
 					a11E.event = accessibilityEvent;
 					a11E.node = accessibilityEvent.getSource();
 
-					a11E.history(0, accessibilityEvent);
-					if (a11E.history.size() > a11E.limit) {
-						a11E.history.subList(a11E.limit, a11E.history.size()).clear();
+					a11E.history.add(0, accessibilityEvent);
+					if (a11E.history.size() > a11E.historyLimit) {
+						a11E.history.subList(a11E.historyLimit, a11E.history.size()).clear();
 					}
 
 					Map listeners = a11E.listeners != void ? a11E.listeners : null;
