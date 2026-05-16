@@ -1,32 +1,37 @@
-/*────────────────────────────────────────────────────────────────
-This code was primarily generated using AI with minimal human editing.
-──────────────────────────────────────────────────────────────── */
-
 import android.os.Handler;
 import android.os.Looper;
 import android.graphics.Color;
 import bsh.This;
 import android.view.accessibility.AccessibilityNodeInfo;
-import bsh.This;
 import io.reactivex.subjects.SingleSubject;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Callable;
 import io.reactivex.subjects.CompletableSubject;
-import java.util.concurrent.TimeUnit;
+
+import android.accessibilityservice.AccessibilityService;
+import android.graphics.PixelFormat;
+import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
+import android.graphics.drawable.GradientDrawable;
+import android.content.Context;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
 
 line(This THIS) {
 	return "[" + THIS.namespace.getInvocationLine() + "] " + THIS.namespace.getInvocationText();
 }
 
 /*────────────────────────────────────────────────────────────────
-	debugMe(List nodes)
-	Debug a list of nodes called from certain Actions
+debugMe(List nodes)
+Debug a list of nodes called from certain Actions
 
-	Parameters:
-		- List nodes, list of nodes to debug
-  ──────────────────────────────────────────────────────────────── */
+Parameters:
+- List nodes, list of nodes to debug
+──────────────────────────────────────────────────────────────── */
 debugMe(List nodes) {
 	if (!debugMe || nodes == null || nodes.isEmpty()) return;
+
 
 	Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -95,7 +100,6 @@ debugMe(List nodes) {
 	};
 
 	mainThread(debug);
-	// Timeout in ms
 	waitNodeBox.blockingAwait(30000, TimeUnit.MILLISECONDS);
 	wait(delay);
 	try {
@@ -111,6 +115,9 @@ debugMe(List nodes) {
 		a11Y.clean();
 	}
 	wait(100);
+
+
+
 }
 
 public void debugMe(AccessibilityNodeInfo node) {
@@ -124,29 +131,29 @@ public void debugMe(Map map) {
 		return;
 	}
 
+
 	List nodes = new ArrayList();
 	Set keys = map.keySet();
 
 	for (Object key: keys) {
 		List value = (List) map.get(key);
 		if (!value.isEmpty()) nodes.addAll(value);
-
 	}
 
 	debugMe(nodes);
+
+
+
 }
 
-import android.accessibilityservice.AccessibilityService;
-import android.graphics.PixelFormat;
-import android.view.Gravity;
-import android.view.View;
-import android.view.WindowManager;
-import android.os.Handler;
-import android.os.Looper;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
-import android.content.Context;
+/*────────────────────────────────────────────────────────────────
+debugMe(double x, double y)
+Displays a debug marker at specific coordinates on a given display.
 
+Parameters:
+- double x, X coordinate of the marker
+- double y, Y coordinate of the marker
+──────────────────────────────────────────────────────────────── */
 public void debugMe(double x, double y) {
 	if (debugMe == void || !debugMe) return;
 	Context accessibilityService = tasker.getAccessibilityService();
@@ -154,7 +161,23 @@ public void debugMe(double x, double y) {
 		tasker.log("debugMe: Accessibility Service not running.");
 		return;
 	}
-	WindowManager wm = (WindowManager) accessibilityService.getSystemService(accessibilityService.WINDOW_SERVICE);
+
+
+	Context windowContext = accessibilityService;
+	try {
+		int displayId = DISPLAY_ID;
+		DisplayManager dm = (DisplayManager) accessibilityService.getSystemService(Context.DISPLAY_SERVICE);
+		if (dm != null) {
+			Display targetDisplay = dm.getDisplay(displayId);
+			if (targetDisplay != null) {
+				windowContext = accessibilityService.createDisplayContext(targetDisplay);
+			}
+		}
+	} catch (Exception e) {
+		tasker.log("debugMe: Failed to resolve target display context: " + e.getMessage());
+	}
+
+	WindowManager wm = (WindowManager) windowContext.getSystemService(Context.WINDOW_SERVICE);
 	WindowManager.LayoutParams params = new WindowManager.LayoutParams();
 	int width = 60;
 	params.width = width;
@@ -172,7 +195,7 @@ public void debugMe(double x, double y) {
 	shape.setShape(GradientDrawable.OVAL);
 	shape.setColor(Color.CYAN);
 
-	View dot = new View(accessibilityService);
+	View dot = new View(windowContext);
 	dot.setBackgroundDrawable(shape);
 	CompletableSubject waitTap = CompletableSubject.create();
 	Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -185,8 +208,7 @@ public void debugMe(double x, double y) {
 						try {
 							wm.removeView(dot);
 							waitTap.onComplete();
-						} catch (Exception e) {
-						}
+						} catch (Exception e) {}
 					}
 				}, debugDelay);
 			} catch (Exception e) {
@@ -196,4 +218,7 @@ public void debugMe(double x, double y) {
 	};
 	mainHandler.post(uiRunnable);
 	waitTap.blockingAwait(debugDelay + 200, TimeUnit.MILLISECONDS);
+
+
+
 }
