@@ -21,7 +21,7 @@ import java.util.concurrent.Callable;
 /*────────────────────────────────────────────────────────────────
 tap(double x, double y, long duration)
 Dispatches a tap gesture at the specified coordinates, adapting
-to the targeted display context from global.DISPLAY_ID.
+to the targeted display context from DISPLAY_ID.
 
 Arguments:
 
@@ -34,36 +34,16 @@ Returns:
 * boolean → True if gesture dispatched successfully, false otherwise.
 ──────────────────────────────────────────────────────────────── */
 public boolean tap(double x, double y, long duration) {
-	Object accessibilityService = tasker.getAccessibilityService();
-	if (accessibilityService == null) return false;
-	AccessibilityService service = (AccessibilityService) accessibilityService;
-
-
+	AccessibilityService service = (AccessibilityService) getService();
 	AccessibilityNodeInfo root = service.getRootInActiveWindow();
 	if (root == null) {
 		return tapShizuku(x, y, duration);
 	}
 
 	try {
-		Context windowContext = service;
-		if (global.DISPLAY_ID != void && global.DISPLAY_ID != null) {
-			try {
-				int displayId = global.DISPLAY_ID;
-				DisplayManager dm = (DisplayManager) service.getSystemService(Context.DISPLAY_SERVICE);
-				if (dm != null) {
-					Display targetDisplay = dm.getDisplay(displayId);
-					if (targetDisplay != null) {
-						windowContext = service.createDisplayContext(targetDisplay);
-					}
-				}
-			} catch (Exception e) {
-				tasker.log("tap: Failed to target display context: " + e.getMessage());
-			}
-		}
-
+		Context windowContext = getContext(true);
 		WindowManager wm = (WindowManager) windowContext.getSystemService(Context.WINDOW_SERVICE);
-		DisplayMetrics dm = new DisplayMetrics();
-		wm.getDefaultDisplay().getRealMetrics(dm);
+		DisplayMetrics dm = getDisplayMetrics(windowContext.getDisplayId());
 
 		int screenWidth = dm.widthPixels;
 		int screenHeight = dm.heightPixels;
@@ -80,7 +60,7 @@ public boolean tap(double x, double y, long duration) {
 			new GestureDescription.StrokeDescription(path, 0, duration, false);
 
 		GestureDescription gesture =
-			new GestureDescription.Builder().addStroke(stroke).setDisplayId(global.DISPLAY_ID).build();
+			new GestureDescription.Builder().addStroke(stroke).setDisplayId(DISPLAY_ID).build();
 
 		HandlerThread handlerThread = new HandlerThread("TapThread");
 		handlerThread.start();
