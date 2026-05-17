@@ -1,0 +1,33 @@
+# [hasNode](/code/main/hasNode.bsh)
+
+Check whether a node or node collection contains a valid accessibility node.
+
+&nbsp;
+# Dependencies
+None
+
+&nbsp;
+# How it works
+`hasNode` verifies that the provided `ArrayList`, `HashMap`, or keyed map entry contains at least one valid `AccessibilityNodeInfo` object.
+
+&nbsp;
+# How it use
+
+**Check a list of nodes:**
+```
+if (hasNode(nodes)) {
+  // safe to use the list
+}
+```
+
+&nbsp;
+**Check a node map by key:**
+```
+if (hasNode(nodesMap, "submit")) {
+  // key exists and contains a node
+}
+```
+
+&nbsp;
+## Return Value
+Returns `true` if a valid node is found, otherwise `false`.
