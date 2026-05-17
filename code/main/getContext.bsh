@@ -1,0 +1,39 @@
+/*────────────────────────────────────────────────────────────────
+This code was primarily generated using AI with minimal human editing.
+──────────────────────────────────────────────────────────────── */
+import android.content.Context;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
+import android.view.WindowManager;
+
+Context getContext(int overlayType) {
+	Context myContext;
+	if (overlayType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
+		myContext = tasker.getAccessibilityService();
+	} else {
+		myContext = context;
+	}
+
+	int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
+	DisplayManager dm = (DisplayManager) myContext.getSystemService(Context.DISPLAY_SERVICE);
+	if (dm != null) {
+		Display targetDisplay = dm.getDisplay(displayId);
+		if (targetDisplay != null) {
+			myContext = myContext.createDisplayContext(targetDisplay);
+		}
+	}
+
+	return myContext;
+}
+
+Context getContext() {
+	return getContext(0);
+}
+
+Context getContext(boolean useAccessibilityService) {
+	if (useAccessibilityService) {
+		return getContext(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY);
+	} else {
+		return getContext(0);
+	}
+}
