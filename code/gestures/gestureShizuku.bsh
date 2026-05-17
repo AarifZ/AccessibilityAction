@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import rikka.shizuku.ShizukuBinderWrapper;
 import android.hardware.input.IInputManager$Stub$Proxy;
 import android.hardware.input.IInputManager$Stub;
+import android.content.Context;
 /*───────────────────────────────────────────────────────────────
 gestureShizuku(Object[][] points, Paint paint)
 **Replays Complex Touch Events via Shizuku**
@@ -32,10 +33,9 @@ public boolean gestureShizuku(Object[][] points, Paint paint) {
 
 	ShizukuBinderWrapper inputBinder = tasker.getShizukuService("input");
 	IInputManager$Stub$Proxy iim = IInputManager$Stub.asInterface(inputBinder);
-
-	WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-	DisplayMetrics dm = new DisplayMetrics();
-	wm.getDefaultDisplay().getRealMetrics(dm);
+	Context windowContext = getContext(true);
+	WindowManager wm = (WindowManager) windowContext.getSystemService(Context.WINDOW_SERVICE);
+	DisplayMetrics dm = getDisplayMetrics(windowContext.getDisplayId());
 	int screenWidth = dm.widthPixels;
 	int screenHeight = dm.heightPixels;
 
@@ -97,6 +97,7 @@ public boolean gestureShizuku(Object[][] points, Paint paint) {
 
 					MotionEvent event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_MOVE, bx, by, 1.0f, 1.0f, 0, 1.0f, 1.0f, 0, 0);
 					event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+					event.setDisplayId(windowContext.getDisplayId());
 					iim.injectInputEvent(event, 1);
 					event.recycle();
 
@@ -116,6 +117,7 @@ public boolean gestureShizuku(Object[][] points, Paint paint) {
 
 				MotionEvent event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, targetX, targetY, 1.0f, 1.0f, 0, 1.0f, 1.0f, 0, 0);
 				event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+				event.setDisplayId(windowContext.getDisplayId());
 				iim.injectInputEvent(event, 1);
 				event.recycle();
 
