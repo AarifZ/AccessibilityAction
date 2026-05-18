@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Iterator;
 
 /*───────────────────────────────────────────────────────────────
-setDisplayIdByWindowId(int windowId)
+setDisplayByWindowId(int windowId)
 **Set Display ID by Window ID**
 Scans all displays for a window matching the provided window ID,
 and saves its corresponding display ID to the global variable 'DISPLAY_ID'.
@@ -17,15 +17,10 @@ Arguments:
 * windowId → The unique integer ID of the target window.
 
 Example:
-setDisplayIdByWindowId(1234);
+setDisplayByWindowId(1234);
 ───────────────────────────────────────────────────────────────*/
-public void setDisplayIdByWindowId(int windowId) {
-	AccessibilityService service = tasker.getAccessibilityService();
-	if (service == null) {
-		return;
-	}
-
-
+public void setDisplayByWindowId(int windowId) {
+	AccessibilityService service = getService();
 	SparseArray allDisplaysWindows = service.getWindowsOnAllDisplays();
 	if (allDisplaysWindows == null) {
 		return;
@@ -46,7 +41,7 @@ public void setDisplayIdByWindowId(int windowId) {
 			}
 
 			if (window.getId() == windowId) {
-				global.DISPLAY_ID = displayId;
+				DISPLAY_ID = displayId;
 				return;
 			}
 		}

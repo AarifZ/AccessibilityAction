@@ -1,6 +1,6 @@
 import android.view.accessibility.AccessibilityWindowInfo;
 
-setDisplayId(int displayId) {
+setDisplay(int displayId) {
 	DISPLAY_ID = displayId;
 	return displayId;
 }
@@ -9,7 +9,7 @@ import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
 /*───────────────────────────────────────────────────────────────
-setDisplayIdByName(String name)
+setDisplay(String name)
 **Finds Display by Name and Maps to BeanShell Globals**
 Iterates over all available system displays, matching their names
 ignoring case. If a match is found, it injects the display ID directly
@@ -19,7 +19,7 @@ Arguments:
 
 * name → The partial or complete name string of the display to find.
 ───────────────────────────────────────────────────────────────*/
-public int setDisplayId(String name) {
+public int setDisplay(String name) {
 	if (name == null) {
 		DISPLAY_ID = 0;
 		return 0;
