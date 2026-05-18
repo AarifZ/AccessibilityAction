@@ -30,7 +30,7 @@ Arguments:
 public void testDisplay(long duration) {
 	Context baseContext = context;
 	try {
-		baseContext = tasker.getAccessibilityService();
+		baseContext = getContext(true);
 	} catch (Exception e) {
 		/* Fallback to context if getService() fails */
 	}

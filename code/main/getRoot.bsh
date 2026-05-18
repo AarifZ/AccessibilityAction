@@ -22,8 +22,9 @@ Example:
 AccessibilityNodeInfo root = getRoot();
 ───────────────────────────────────────────────────────────────*/
 AccessibilityNodeInfo getRoot() {
-	Context service = getService();
-	if (DISPLAY_ID == 0) {
+	AccessibilityService service = getService();
+	int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
+	if (displayId == 0) {
 		return service.getRootInActiveWindow();
 	} else {
 		SparseArray allDisplaysWindows = service.getWindowsOnAllDisplays();
@@ -31,8 +32,7 @@ AccessibilityNodeInfo getRoot() {
 			return null;
 		}
 
-
-		List windows = (List) allDisplaysWindows.get(DISPLAY_ID);
+		List windows = (List) allDisplaysWindows.get(displayId);
 		if (windows == null) {
 			return null;
 		}
@@ -44,7 +44,7 @@ AccessibilityNodeInfo getRoot() {
 				continue;
 			}
 
-			if (window.isActive()) {
+			if (window.isFocused()) {
 				AccessibilityNodeInfo rootNode = window.getRoot();
 				if (rootNode != null) {
 					return rootNode;

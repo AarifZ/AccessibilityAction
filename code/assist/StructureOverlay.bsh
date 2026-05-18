@@ -73,25 +73,18 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 	List hiddenBoxes = new ArrayList();
 	List boxHistory = new ArrayList();
 
-
-
-	final Object accessibilityService = tasker.getAccessibilityService();
+	final Object accessibilityService = getService();
 	if (accessibilityService == null) {
 		throw new JavaCodeException("Accessibility Service not running.");
 	}
 
-	Context overlayContext = useA11y ? accessibilityService : context.getApplicationContext();
+	Context overlayContext = getContext(useA11y);
 	final WindowManager windowManager = (WindowManager) overlayContext.getSystemService(Context.WINDOW_SERVICE);
 	Handler mainHandler = new Handler(Looper.getMainLooper());
 
 	int overlayType = useA11y ?
 		WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY :
 		WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-
-	AccessibilityNodeInfo rootNode = (AccessibilityNodeInfo) accessibilityService.getRootInActiveWindow();
-	if (rootNode == null) {
-		throw new JavaCodeException("Could not get root node.");
-	}
 
 	This tm = ThemeManager(overlayContext);
 	tm.setThemeDark();
@@ -432,11 +425,7 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 	return this;
 }
 StructureOverlay(boolean useA11y) {
-	final Object accessibilityService = tasker.getAccessibilityService();
-	if (accessibilityService == null) {
-		throw new JavaCodeException("Accessibility Service not running.");
-	}
-	AccessibilityNodeInfo rootNode = (AccessibilityNodeInfo) accessibilityService.getRootInActiveWindow();
+	AccessibilityNodeInfo rootNode = (AccessibilityNodeInfo) getRoot();
 	if (rootNode == null) {
 		throw new JavaCodeException("Could not get root node.");
 	}

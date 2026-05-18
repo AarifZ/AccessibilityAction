@@ -88,8 +88,7 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 	if (this.caller.nodeBoxStrokeColor != void) DEFAULT_STROKE_COLOR = this.caller.nodeBoxStrokeColor;
 	if (this.caller.nodeBoxStrokeWidth != void) DEFAULT_STROKE_WIDTH = this.caller.nodeBoxStrokeWidth;
 
-	/* Create display context dynamically based on the DISPLAY_ID variable if specified */
-	displayContext = getContext(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY);
+	displayContext = getContext(overlayType);
 
 	View view = new View(displayContext);
 	Rect bounds = new Rect();
@@ -264,7 +263,7 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 }
 
 NodeBox(AccessibilityNodeInfo node) {
-	Context nodeContext = tasker.getAccessibilityService();
 	int overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+	Context nodeContext = getContext(overlayType);
 	return NodeBox(nodeContext, overlayType, node);
 }

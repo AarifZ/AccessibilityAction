@@ -288,8 +288,8 @@ public This InfoDialog(AccessibilityNodeInfo targetNode, Context ctx, int overla
 }
 
 public This InfoDialog(AccessibilityNodeInfo targetNode) {
-	Context accessibilityService = tasker.getAccessibilityService();
-	if (accessibilityService == null) return null;
 	int overlayType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+	Context accessibilityService = getContext(true);
+	if (accessibilityService == null) return null;
 	return InfoDialog(targetNode, accessibilityService, overlayType);
 }

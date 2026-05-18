@@ -9,7 +9,7 @@ import android.view.WindowManager;
 Context getContext(int overlayType) {
 	Context myContext;
 	if (overlayType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
-		myContext = tasker.getAccessibilityService();
+		myContext = getService();
 	} else {
 		myContext = context;
 	}

@@ -19,6 +19,7 @@ import android.widget.LinearLayout;
 
 import com.google.android.material.button.MaterialButton;
 import com.joaomgcd.taskerm.action.java.JavaCodeException;
+import android.accessibilityservice.AccessibilityService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +42,7 @@ public int dp(int value) {
   ───────────────────────────────────────────────────────────────*/
 public This AssistButton(int initialX, int initialY) {
 	This a11Y = tasker.getJavaVariable("a11Y");
-	final Object accessibilityService = tasker.getAccessibilityService();
+	final AccessibilityService accessibilityService = getService();
 	if (accessibilityService == null) {
 		throw new JavaCodeException("Accessibility Service not running.");
 	}
@@ -69,7 +70,7 @@ public This AssistButton(int initialX, int initialY) {
 		btn.setIconTint(android.content.res.ColorStateList.valueOf(iconColor));
 	}
 
-	Context assistContext = useA11y ? accessibilityService : context.getApplicationContext();
+	Context assistContext = getContext(useA11y);
 	WindowManager windowManager = (WindowManager) assistContext.getSystemService(Context.WINDOW_SERVICE);
 
 	int assistOverlayType = useA11y ?
@@ -244,6 +245,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	remove() {
 		if (isShown) windowManager.removeView(assistButton);
+		isShown = false;
 		a11Y.clean();
 	}
 

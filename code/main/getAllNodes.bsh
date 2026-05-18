@@ -18,11 +18,7 @@ import java.util.ArrayList;
  *───────────────────────────────────────────────────────────────*/
 ArrayList getAllNodes() {
 	AccessibilityService service = getService();
-	if (service == null) {
-		tasker.log("Accessibility service not active!", LOG_FILE);
-		return new ArrayList();
-	}
-	AccessibilityNodeInfo root = service.getRootInActiveWindow();
+	AccessibilityNodeInfo root = getRoot();
 	if (root == null) {
 		tasker.log("No active root node (screen inaccessible).", LOG_FILE);
 		return new ArrayList();

@@ -31,7 +31,7 @@ tasker.log("Found display: " + id);
 public ArrayList getDisplayIds() {
 	ArrayList displayIds = new ArrayList();
 
-	AccessibilityService service = tasker.getAccessibilityService();
+	AccessibilityService service = getService();
 	if (service == null) {
 		return displayIds;
 	}

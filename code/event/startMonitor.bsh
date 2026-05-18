@@ -11,11 +11,7 @@ import io.reactivex.internal.operators.observable.ObservableHide;
 import io.reactivex.disposables.Disposable;
 
 startMonitor() {
-
-	if (tasker.getAccessibilityService() == null) {
-		throw new JavaCodeException("Tasker Accessibility Monitor is not started.");
-	}
-
+	getService();
 	This a11E = tasker.getJavaVariable("a11E");
 	if (a11E == null || a11E == void) {
 		throw new JavaCodeException("The a11E object is missing.");

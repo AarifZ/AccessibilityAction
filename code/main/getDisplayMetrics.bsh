@@ -26,7 +26,6 @@ public DisplayMetrics getDisplayMetrics(int displayId) {
 		return null;
 	}
 
-
 	Display display = displayManager.getDisplay(displayId);
 	if (display == null) {
 		return null;
@@ -39,9 +38,6 @@ public DisplayMetrics getDisplayMetrics(int displayId) {
 }
 
 getDisplayMetrics() {
-	if (DISPLAY_ID == void) {
-		return getDisplayMetrics(0);
-	} else {
-		return getDisplayMetrics(DISPLAY_ID);
-	}
+	int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
+	return getDisplayMetrics(displayId);
 }
