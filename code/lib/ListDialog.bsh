@@ -36,13 +36,16 @@ import java.util.function.Consumer;
 import bsh.This;
 import io.reactivex.subjects.CompletableSubject;
 import java.util.concurrent.TimeUnit;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
 
 /*───────────────────────────────────────────────────────────────
-  ListDialog Component[cite: 1]
+  ListDialog Component
   ───────────────────────────────────────────────────────────────*/
 ListDialog(This config) {
 
 	Activity activity;
+	Context activityContext;
 	boolean isRemoved = true;
 	boolean hasShown = false;
 	ArrayList selectedItems = new ArrayList();
@@ -53,7 +56,7 @@ ListDialog(This config) {
 	List preSelect = config.preSelect == void ? null : config.preSelect;
 	long timeout = config.timeout == void ? 0 : config.timeout;
 	
-	/* Height Logic Setup[cite: 1] */
+	/* Height Logic Setup */
 	Object rawMaxH = config.maxHeight == void ? 0.8 : config.maxHeight;
 	Object rawMaxL = config.maxHeightList == void ? 0.5 : config.maxHeightList;
 
@@ -86,7 +89,16 @@ ListDialog(This config) {
 
 	layout(Activity act) {
 		activity = act;
-		DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+		activityContext = activity;
+		int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
+		// Commented since Tasker doens't support running on target display
+		// DisplayManager dm = (DisplayManager) activity.getSystemService(Context.DISPLAY_SERVICE);
+		// if (dm != null) {
+		// 	Display targetDisplay = dm.getDisplay(displayId);
+		// 	if (targetDisplay != null) {
+		// 		activityContext = activity.createDisplayContext(targetDisplay);
+		// 	}
+		// }
 		
 		android.content.pm.PackageManager pm = activity.getPackageManager();
 
@@ -100,13 +112,13 @@ ListDialog(This config) {
 		lp.gravity = Gravity.BOTTOM;
 		window.setAttributes(lp);
 
-		This tm = ThemeManager(activity);
+		This tm = ThemeManager(activityContext);
 		tm.setThemeDark();
 
-		root = new FloatingToolbarLayout(activity);
+		root = new FloatingToolbarLayout(activityContext);
 		root.setBackgroundColor(Color.TRANSPARENT);
 
-		LinearLayout mainContainer = new LinearLayout(activity);
+		LinearLayout mainContainer = new LinearLayout(activityContext);
 		mainContainer.setOrientation(1);
 
 		LinearLayout.LayoutParams mainLp = new LinearLayout.LayoutParams(-1, -2);
@@ -121,7 +133,7 @@ ListDialog(This config) {
 		mainContainer.setClipToOutline(true);
 
 		if (title != null) {
-			MaterialToolbar toolbar = new MaterialToolbar(activity);
+			MaterialToolbar toolbar = new MaterialToolbar(activityContext);
 			toolbar.setTitle(title);
 			toolbar.setTitleCentered(true);
 			mainContainer.addView(toolbar);
@@ -129,7 +141,7 @@ ListDialog(This config) {
 
 		TextInputEditText filterInput = null;
 		if (showFilter) {
-			TextInputLayout filterWrapper = new TextInputLayout(activity);
+			TextInputLayout filterWrapper = new TextInputLayout(activityContext);
 			filterWrapper.setHint("Search...");
 			filterWrapper.setBoxBackgroundMode(2);
 			filterInput = new TextInputEditText(filterWrapper.getContext());
@@ -137,7 +149,7 @@ ListDialog(This config) {
 			mainContainer.addView(filterWrapper);
 		}
 
-		ListView listView = new ListView(activity);
+		ListView listView = new ListView(activityContext);
 		listView.setDivider(null);
 		listView.setDividerHeight(0);
 		
@@ -174,34 +186,34 @@ ListDialog(This config) {
 					TextView t1, t2;
 
 					if (cnv == null) {
-						row = new LinearLayout(activity);
+						row = new LinearLayout(activityContext);
 						row.setOrientation(0);
 						row.setGravity(Gravity.CENTER_VERTICAL);
 						row.setPadding(dp(0), dp(12), dp(0), dp(12));
 
-						iv = new ImageView(activity);
+						iv = new ImageView(activityContext);
 						iv.setLayoutParams(new LinearLayout.LayoutParams(dp(40), dp(40)));
 						iv.setPadding(0, 0, dp(16), 0);
 						row.addView(iv);
 
-						LinearLayout tg = new LinearLayout(activity);
+						LinearLayout tg = new LinearLayout(activityContext);
 						tg.setOrientation(1);
 						tg.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
 
-						t1 = new TextView(activity);
+						t1 = new TextView(activityContext);
 						t1.setTextSize(16);
 						t1.setTextColor((int) tm.attr("colorOnSurface"));
 						t1.setEllipsize(TextUtils.TruncateAt.END);
 						tg.addView(t1);
 
-						t2 = new TextView(activity);
+						t2 = new TextView(activityContext);
 						t2.setTextSize(14);
 						t2.setTextColor((int) tm.attr("colorOnSurfaceVariant"));
 						tg.addView(t2);
 						row.addView(tg);
 
 						if (isMulti) {
-							CheckBox ck = new CheckBox(activity);
+							CheckBox ck = new CheckBox(activityContext);
 							ck.setFocusable(false);
 							ck.setClickable(false);
 							row.addView(ck);
@@ -223,7 +235,7 @@ ListDialog(This config) {
 					if (isMulti) {
 						CheckBox cb = (CheckBox) row.getChildAt(row.getChildCount() - 1);
 						boolean found = false;
-						/* FIX: Use object identity to handle items with duplicate titles correctly[cite: 1] */
+						/* FIX: Use object identity to handle items with duplicate titles correctly */
 						for (int k = 0; k < selectedItems.size(); k++) {
 							if (selectedItems.get(k).equals(itemData)) {
 								found = true;
@@ -257,13 +269,13 @@ ListDialog(This config) {
 
 		mainContainer.addView(listView);
 
-		/* Button Container[cite: 1] */
-		LinearLayout bc = new LinearLayout(activity);
+		/* Button Container */
+		LinearLayout bc = new LinearLayout(activityContext);
 		bc.setOrientation(0);
 		bc.setGravity(Gravity.END);
 		bc.setPadding(0, dp(8), 0, 0);
 
-		MaterialButton cBtn = new MaterialButton(activity);
+		MaterialButton cBtn = new MaterialButton(activityContext);
 		cBtn.setText("CANCEL");
 		cBtn.setOnClickListener(new View.OnClickListener() {
 			onClick(View v) {
@@ -274,7 +286,7 @@ ListDialog(This config) {
 		bc.addView(cBtn);
 
 		if (isMulti) {
-			MaterialButton oBtn = new MaterialButton(activity);
+			MaterialButton oBtn = new MaterialButton(activityContext);
 			LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
 			ol.leftMargin = dp(12);
 			oBtn.setLayoutParams(ol);
@@ -296,7 +308,7 @@ ListDialog(This config) {
 				clicked.put("index", pos);
 				if (isMulti) {
 					int idx = -1;
-					/* FIX: Use object identity to handle items with duplicate titles correctly[cite: 1] */
+					/* FIX: Use object identity to handle items with duplicate titles correctly */
 					for (int i = 0; i < selectedItems.size(); i++) {
 						if (selectedItems.get(i) == clicked) { 
 							idx = i; 
