@@ -10,17 +10,17 @@ import android.accessibilityservice.AccessibilityService;
 ───────────────────────────────────────────────────────────────*/
 
 back() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
 }
 
 home() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME);
 }
 
 recents() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
 }
 
@@ -30,7 +30,7 @@ tasks() {
 }
 
 notifications() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
 }
 
@@ -40,7 +40,7 @@ notif() {
 }
 
 qs() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS);
 }
 
@@ -50,7 +50,7 @@ quicksettings() {
 }
 
 power() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG);
 }
 
@@ -60,7 +60,7 @@ powerdialog() {
 }
 
 splitscreen() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN);
 }
 
@@ -70,7 +70,7 @@ split() {
 }
 
 lock() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN);
 }
 
@@ -80,7 +80,7 @@ lockscreen() {
 }
 
 screenshot() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT);
 }
 
@@ -90,7 +90,7 @@ ss() {
 }
 
 dismiss() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE);
 }
 
@@ -100,7 +100,7 @@ closepanel() {
 }
 
 a11ybutton() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_BUTTON);
 }
 
@@ -110,7 +110,7 @@ accessibilitybutton() {
 }
 
 shortcut() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_SHORTCUT);
 }
 
@@ -120,7 +120,7 @@ a11yshortcut() {
 }
 
 allapps() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS);
 }
 
@@ -130,7 +130,7 @@ drawer() {
 }
 
 lastapp() {
-	svc = getService();
+	AccessibilityService svc = getService();
 	// Press Recents twice to switch to the last app
 	svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
 	wait(50);
