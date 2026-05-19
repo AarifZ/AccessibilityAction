@@ -1,0 +1,316 @@
+/*────────────────────────────────────────────────────────────────
+InfoToast with Fallback Support
+Custom overlay toast for given accessibility node
+Falls back to standard views when Material Design unavailable
+──────────────────────────────────────────────────────────────── */
+
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
+import android.graphics.Rect;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.TextView;
+import android.widget.LinearLayout;
+import android.widget.FrameLayout;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.DisplayMetrics;
+import bsh.This;
+import android.text.TextUtils;
+import java.util.Map;
+import java.util.HashMap;
+
+/*────────────────────────────────────────────────────────────────
+InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType)
+Custom class to manage the InfoToast overlay for given node.
+With complete fallback to standard Android components.
+
+Parameters:
+	node: AccessibilityNodeInfo
+	overlayContext: Context
+	overlayType: int
+
+Returns:
+	bsh.This InfoToast
+
+Methods:
+	- show() shows info toast.
+	- remove() removes info toast.
+	- isRemoved() returns true if info is removed.
+	- addRow(String key, String label, String value, int color) adds a row to info toast.
+	- updateRow(String key, String value) updates a row in info toast.
+	- removeRow(String key) removes a row from info toast.
+	- clearRows() clears all rows from info toast.
+
+  ─────────────────────────────────────────────────────────────── */
+InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
+	if (node == null) return null;
+	This TOP = this;
+	This a11Y = tasker.getJavaVariable("a11Y");
+	WindowManager windowManager = (WindowManager) overlayContext.getSystemService(Context.WINDOW_SERVICE);
+	final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+	boolean useA11y = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY == overlayType ? true : false;
+	int getStatusBarHeight() {
+		int result = 0;
+		int resourceId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
+		if (resourceId > 0) {
+			result = context.getResources().getDimensionPixelSize(resourceId);
+		}
+		if (useA11y) {
+			if (a11Y.useA11yOffset) {
+				return result;
+			} else {
+				return 0;
+			}
+		} else {
+			if (a11Y.useOffset) {
+				return result;
+			} else {
+				return 0;
+			}
+		}
+	}
+
+	boolean isRemoved;
+	boolean isShown;
+
+	/* Row storage */
+	final Map rows = new HashMap();
+
+	/* Theme with fallback */
+	This tm = null;
+	try {
+		tm = ThemeManager(overlayContext);
+		tm.setThemeDark();
+	} catch (Exception e) {
+		tasker.log("ThemeManager unavailable for InfoToast");
+	}
+
+	final int primaryColor = tm != null ? (int) tm.attr("colorPrimary") : Color.parseColor("#6200EA");
+	final int onSurfaceColor = tm != null ? (int) tm.attr("colorOnSurface") : Color.WHITE;
+	final int secondaryColor = tm != null ? (int) tm.attr("colorSecondary") : Color.parseColor("#03DAC6");
+	final int surfaceColor = tm != null ? (int) tm.attr("colorSurfaceContainerHigh") : Color.parseColor("#1F1F1F");
+	final int outlineColor = tm != null ? (int) tm.attr("colorOutline") : Color.parseColor("#79747E");
+
+	/* Node data */
+	final Rect bounds = new Rect();
+	node.getBoundsInScreen(bounds);
+
+	String nodeId = node.getViewIdResourceName() != null ? node.getViewIdResourceName() : "no-id";
+	String nodeText = getText(node);
+	String fullClass = node.getClassName() != null ? node.getClassName().toString() : "Unknown";
+	String nodeClass = fullClass.substring(fullClass.lastIndexOf(".") + 1);
+
+	StringBuffer statusBuf = new StringBuffer();
+	if (node.isClickable()) statusBuf.append("Clickable ");
+	if (node.isFocusable()) statusBuf.append("Focusable ");
+	String nodeStatus = statusBuf.length() > 0 ? statusBuf.toString().trim() : null;
+
+	/* Container */
+	final LinearLayout container = new LinearLayout(overlayContext);
+	container.setOrientation(LinearLayout.VERTICAL);
+	container.setPadding(25, 15, 25, 15);
+
+	GradientDrawable bg = new GradientDrawable();
+	bg.setColor(surfaceColor);
+	bg.setCornerRadius(12f);
+	bg.setStroke(3, outlineColor);
+	container.setBackground(bg);
+
+	/*──────────── ROW SYSTEM ────────────*/
+	addRow(String key, String label, String value, int maxLines, int color) {
+		mainHandler.post(new Runnable() {
+			run() {
+				try {
+					TextView rowText = (TextView) rows.get(key);
+					boolean isFirst = (container.getChildCount() == 0);
+					int topMargin = isFirst ? 0 : dp(2);
+					LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+					params.setMargins(0, topMargin, 0, 0);
+					if (rowText == null) {
+						rowText = new TextView(overlayContext);
+						rowText.setLayoutParams(params);
+						rowText.setTextSize(11.5f);
+						rowText.setMaxLines(maxLines);
+						rowText.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+						container.addView(rowText);
+						rows.put(key, rowText);
+					}
+
+					rowText.setText(label + ": " + value);
+					rowText.setTextColor(color);
+
+					refreshPosition();
+				} catch (Exception e) {
+					tasker.log("Row add error: " + e.getMessage());
+				}
+			}
+		});
+	}
+
+	addRow(String key, String label, String value) {
+		addRow(key, label, value, 1, secondaryColor);
+	}
+	
+	addRow(String key, String label, String value, int maxLines) {
+		addRow(key, label, value, maxLines, secondaryColor);
+	}
+
+	updateRow(String key, String value) {
+		mainHandler.post(new Runnable() {
+			run() {
+				try {
+					TextView rowText = (TextView) rows.get(key);
+					if (rowText != null) {
+						String text = rowText.getText().toString();
+						int idx = text.indexOf(":");
+						String label = idx != -1 ? text.substring(0, idx) : key;
+						rowText.setText(label + ": " + value);
+						refreshPosition();
+					}
+				} catch (Exception e) {}
+			}
+		});
+	}
+
+	removeRow(String key) {
+		mainHandler.post(new Runnable() {
+			run() {
+				try {
+					TextView rowText = (TextView) rows.get(key);
+					if (rowText != null) {
+						container.removeView(rowText);
+						rows.remove(key);
+						refreshPosition();
+					}
+				} catch (Exception e) {}
+			}
+		});
+	}
+
+	clearRows() {
+		mainHandler.post(new Runnable() {
+			run() {
+				try {
+					container.removeAllViews();
+					rows.clear();
+					refreshPosition();
+				} catch (Exception e) {}
+			}
+		});
+	}
+
+	/*──────────── INITIAL DATA ────────────*/
+	addRow("id", "ID", nodeId, 1, primaryColor);
+	addRow("class", "Class", nodeClass, 1, secondaryColor);
+	if (nodeStatus != null && nodeStatus.length() > 0) addRow("status", "Status", nodeStatus, 1, onSurfaceColor);
+	if (nodeText != null && nodeText.length() > 0) addRow("text", "Text", nodeText, 2, onSurfaceColor);
+
+	/*──────────── MEASURE + POSITION ────────────*/
+	DisplayMetrics metrics = overlayContext.getResources().getDisplayMetrics();
+	final int screenWidth = metrics.widthPixels;
+	final int screenHeight = metrics.heightPixels;
+	final int statusBarHeight = getStatusBarHeight();
+
+	final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+		WindowManager.LayoutParams.WRAP_CONTENT,
+		WindowManager.LayoutParams.WRAP_CONTENT,
+		overlayType,
+		WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+		WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+		WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+		PixelFormat.TRANSLUCENT
+	);
+
+	params.gravity = Gravity.TOP | Gravity.LEFT;
+
+	refreshPosition() {
+		try {
+			container.measure(
+				View.MeasureSpec.makeMeasureSpec(screenWidth, View.MeasureSpec.AT_MOST),
+				View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+			);
+
+			int mWidth = container.getMeasuredWidth();
+			int mHeight = container.getMeasuredHeight();
+
+			params.width = mWidth;
+			params.height = mHeight;
+
+			int calcX = bounds.left;
+			if (calcX + mWidth > screenWidth) {
+				calcX = bounds.right - mWidth;
+			}
+
+			int calcY = bounds.top - mHeight;
+			if (calcY < statusBarHeight) {
+				calcY = bounds.bottom;
+			}
+			if (calcY + mHeight > screenHeight) {
+				calcY = screenHeight - mHeight;
+			}
+
+			params.x = calcX;
+			params.y = calcY;
+
+			if (isShown) {
+				windowManager.updateViewLayout(container, params);
+			}
+		} catch (Exception e) {
+			tasker.log("Position refresh error: " + e.getMessage());
+		}
+	}
+
+	/*──────────── SHOW ────────────*/
+
+	container.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+		onViewAttachedToWindow(View v) {
+			isRemoved = false;
+			isShown = true;
+			try {
+				a11Y.addOverlay(TOP);
+			} catch (Exception e) {}
+		}
+		onViewDetachedFromWindow(View v) {
+			isRemoved = true;
+			isShown = false;
+			try {
+				a11Y.removeOverlay(TOP);
+			} catch (Exception e) {}
+		}
+	});
+
+	isRemoved() {
+		return isRemoved;
+	}
+
+	remove() {
+		mainHandler.post(new Runnable() {
+			run() {
+				try {
+					windowManager.removeView(container);
+				} catch (Exception e) {}
+			}
+		});
+	}
+
+	show() {
+		mainHandler.post(new Runnable() {
+			run() {
+				try {
+					windowManager.addView(container, params);
+				} catch (Exception e) {
+					tasker.log("Show error: " + e.getMessage());
+				}
+			}
+		});
+	}
+
+	show();
+	return this;
+}

@@ -1,0 +1,262 @@
+import java.util.function.Consumer;
+import android.app.Activity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
+import android.view.Gravity;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.FrameLayout;
+import android.widget.CompoundButton;
+import android.widget.Switch;
+import android.widget.EditText;
+import android.widget.Button;
+import android.text.InputType;
+import android.text.TextWatcher;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.content.Context;
+import bsh.This;
+
+/*───────────────────────────────────────────────────────────────
+  AssistSetting() with Fallback Support
+  Uses Material Design when available, falls back to standard Android UI
+  ───────────────────────────────────────────────────────────────*/
+AssistSetting() {
+	Activity activity;
+	boolean isRemoved = true;
+	boolean hasShown = false;
+	This a11Y = tasker.getJavaVariable("a11Y");
+	boolean useMaterial = false;
+	
+	/* Check Material availability */
+	try {
+		Class.forName("com.google.android.material.materialswitch.MaterialSwitch");
+		useMaterial = true;
+	} catch (Exception e) {
+		useMaterial = false;
+	}
+
+	remove() {
+		if (activity != null) {
+			activity.finish();
+			activity = null;
+		}
+		isRemoved = true;
+	}
+
+	layout(Activity act) {
+		activity = act;
+		float density = activity.getResources().getDisplayMetrics().density;
+
+		window = activity.getWindow();
+		window.requestFeature(Window.FEATURE_NO_TITLE);
+		window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+		window.setBackgroundDrawableResource(android.R.color.transparent);
+		window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+
+		WindowManager.LayoutParams lp = window.getAttributes();
+		lp.gravity = Gravity.BOTTOM;
+		lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+		window.setAttributes(lp);
+		
+		This tm = null;
+		try {
+			tm = ThemeManager(activity);
+			tm.setThemeDark();
+		} catch (Exception e) {}
+		
+		baseRoot = new FrameLayout(activity);
+
+		/* Applying requested shape to baseRoot */
+		GradientDrawable shape = new GradientDrawable();
+		shape.setCornerRadius(28 * density);
+		int bgColor = tm != null ? (int) tm.attr("colorSurface") : Color.parseColor("#121212");
+		shape.setColor(bgColor);
+		baseRoot.setBackground(shape);
+		baseRoot.setClipToOutline(true);
+
+		root = new LinearLayout(activity);
+		root.setBackgroundColor(Color.TRANSPARENT);
+
+		final LinearLayout main = new LinearLayout(activity);
+		main.setOrientation(LinearLayout.VERTICAL);
+
+		FrameLayout.LayoutParams mainParams = new FrameLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT,
+			ViewGroup.LayoutParams.WRAP_CONTENT
+		);
+		mainParams.gravity = Gravity.BOTTOM;
+		main.setLayoutParams(mainParams);
+
+		/* Create toolbar */
+		android.widget.TextView toolbar = new android.widget.TextView(activity);
+		toolbar.setText("Settings");
+		toolbar.setTextSize(18);
+		toolbar.setTypeface(null, android.graphics.Typeface.BOLD);
+		toolbar.setTextColor(Color.WHITE);
+		toolbar.setGravity(Gravity.CENTER);
+		toolbar.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
+		main.addView(toolbar);
+
+		ScrollView scroller = new ScrollView(activity);
+		scroller.setVerticalScrollBarEnabled(false);
+
+		LinearLayout content = new LinearLayout(activity);
+		content.setOrientation(LinearLayout.VERTICAL);
+		int padding = (int)(16 * density);
+		content.setPadding(padding, padding, padding, padding);
+		scroller.addView(content);
+		main.addView(scroller, new LinearLayout.LayoutParams(-1, 0, 1.0f));
+
+		createSwitch(String text, String variableName) {
+			CompoundButton itemSwitch;
+			
+			if (useMaterial) {
+				try {
+					itemSwitch = new com.google.android.material.materialswitch.MaterialSwitch(activity);
+				} catch (Exception e) {
+					itemSwitch = new Switch(activity);
+				}
+			} else {
+				itemSwitch = new Switch(activity);
+			}
+			
+			((android.widget.TextView) itemSwitch).setText(text);
+			boolean state = a11Y.namespace.getVariable(variableName);
+			itemSwitch.setChecked(state);
+			itemSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+				onCheckedChanged(CompoundButton b, boolean checked) {
+					try {
+						a11Y.namespace.setVariable(variableName, checked, false);
+					} catch (Exception e) {}
+				}
+			});
+			content.addView(itemSwitch);
+			int spacerHeight = (int)(8 * density);
+			View spacer = new View(activity);
+			LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, spacerHeight);
+			spacer.setLayoutParams(params);
+			content.addView(spacer);
+			return itemSwitch;
+		}
+
+		createInput(String hintText, String variableName, Object defaultValue) {
+			EditText editText = new EditText(activity);
+			editText.setHint(hintText);
+			Object value = a11Y.namespace.getVariable(variableName);
+			editText.setText(String.valueOf(value));
+
+			String inputClass = value.getClass().getSimpleName();
+			switch (inputClass) {
+				case "Float":
+				case "Double":
+					editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+					break;
+				case "Integer":
+				case "Long":
+					editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+					break;
+			}
+
+			editText.addTextChangedListener(new TextWatcher() {
+				beforeTextChanged(CharSequence charSequence, int start, int count, int after) {}
+				onTextChanged(CharSequence charSequence, int start, int before, int count) {
+					try {
+						if (charSequence.length() > 0) {
+							String newValue = charSequence.toString();
+							switch (inputClass) {
+								case "Integer":
+									a11Y.namespace.setVariable(variableName, Integer.parseInt(newValue), false);
+									break;
+								case "Long":
+									a11Y.namespace.setVariable(variableName, Long.parseLong(newValue), false);
+									break;
+								case "Double":
+									a11Y.namespace.setVariable(variableName, Double.parseDouble(newValue), false);
+									break;
+								case "Float":
+									a11Y.namespace.setVariable(variableName, Float.parseFloat(newValue), false);
+									break;
+								default:
+									a11Y.namespace.setVariable(variableName, newValue, false);
+									break;
+							}
+						} else {
+							a11Y.namespace.setVariable(variableName, defaultValue, false);
+						}
+					} catch (Exception e) {}
+				}
+				afterTextChanged(android.text.Editable charSequence) {}
+			});
+
+			content.addView(editText);
+			int spacerHeight = (int)(8 * density);
+			View spacer = new View(activity);
+			LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, spacerHeight);
+			spacer.setLayoutParams(params);
+			content.addView(spacer);
+			return editText;
+		}
+
+		createSwitch("Enable debug mode", "debugMe");
+		createSwitch("Show debugging information on a toast", "debugInfo");
+		createSwitch("Use offset for normal overlay", "useOffset");
+		createSwitch("Use offset for Accessibility", "useA11yOffset");
+		createSwitch("Waiting nodes will timeout if not found", "waitNodes");
+		createSwitch("Use accessibility for structure overlay", "useA11yStructure");
+		createSwitch("Long press a box enter quick mode instead of opening copy dialog", "quickAddMode");
+		createInput("Find hint duration (ms)", "findDelay", 100);
+		createInput("Debug highlight duration (ms)", "debugDelay", 1000);
+
+		Button saveBtn = new Button(activity);
+		saveBtn.setText("CLOSE");
+		saveBtn.setOnClickListener(new View.OnClickListener() {
+			onClick(View v) {
+				remove();
+			}
+		});
+		content.addView(saveBtn);
+
+		root.addView(main);
+
+		activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+			onViewAttachedToWindow(View v) {
+				hasShown = true;
+				isRemoved = false;
+			}
+			onViewDetachedFromWindow(View v) {
+				isRemoved = true;
+				hasShown = false;
+				activity = null;
+			}
+		});
+		baseRoot.addView(root);
+		activity.setContentView(baseRoot);
+	}
+
+	Consumer uiLogic = new Consumer() {
+		accept(Object activityObj) {
+			layout((Activity) activityObj);
+		}
+	};
+
+	show() {
+		if (!hasShown) {
+			isRemoved = false;
+			hasShown = true;
+			tasker.doWithActivity(uiLogic);
+		}
+	}
+
+	toggle() {
+		if (!hasShown) {
+			show();
+		} else {
+			remove();
+		}
+	}
+
+	return this;
+}
