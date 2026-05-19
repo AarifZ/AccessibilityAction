@@ -15,7 +15,9 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -27,11 +29,6 @@ import java.util.Map;
 import java.util.List;
 import java.util.concurrent.Callable;
 import com.joaomgcd.taskerm.action.java.ClassImplementation;
-import com.google.android.material.textfield.TextInputLayout;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.floatingtoolbar.FloatingToolbarLayout;
 import java.util.function.Consumer;
 import bsh.This;
 import io.reactivex.subjects.CompletableSubject;
@@ -40,7 +37,9 @@ import android.hardware.display.DisplayManager;
 import android.view.Display;
 
 /*───────────────────────────────────────────────────────────────
-  ListDialog Component
+  ListDialog Component with Fallback Support
+  Uses Material Design when available, falls back to standard Android UI
+  when Material Design library is stripped (e.g. Tasker App Factory export)
   ───────────────────────────────────────────────────────────────*/
 ListDialog(This config) {
 
@@ -61,10 +60,19 @@ ListDialog(This config) {
 	Object rawMaxL = config.maxHeightList == void ? 0.5 : config.maxHeightList;
 
 	final Map iconCache = new HashMap();
-	FloatingToolbarLayout root;
+	View root;
 
 	List originalList = config.itemList;
 	if (originalList == null) originalList = new ArrayList();
+
+	/* Check Material Design availability */
+	boolean useMaterial = false;
+	try {
+		Class.forName("com.google.android.material.floatingtoolbar.FloatingToolbarLayout");
+		useMaterial = true;
+	} catch (Exception e) {
+		useMaterial = false;
+	}
 
 	boolean hasMethod(String methodName, Class[] classes) {
 		if (classes == null) classes = new Class[] {};
@@ -91,14 +99,6 @@ ListDialog(This config) {
 		activity = act;
 		activityContext = activity;
 		int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
-		// Commented since Tasker doens't support running on target display
-		// DisplayManager dm = (DisplayManager) activity.getSystemService(Context.DISPLAY_SERVICE);
-		// if (dm != null) {
-		// 	Display targetDisplay = dm.getDisplay(displayId);
-		// 	if (targetDisplay != null) {
-		// 		activityContext = activity.createDisplayContext(targetDisplay);
-		// 	}
-		// }
 		
 		android.content.pm.PackageManager pm = activity.getPackageManager();
 
@@ -112,11 +112,22 @@ ListDialog(This config) {
 		lp.gravity = Gravity.BOTTOM;
 		window.setAttributes(lp);
 
-		This tm = ThemeManager(activityContext);
-		tm.setThemeDark();
+		This tm = null;
+		try {
+			tm = ThemeManager(activityContext);
+			tm.setThemeDark();
+		} catch (Exception e) {
+			tasker.log("ThemeManager unavailable for ListDialog");
+		}
 
-		root = new FloatingToolbarLayout(activityContext);
-		root.setBackgroundColor(Color.TRANSPARENT);
+		/* Root container - try FloatingToolbarLayout, fallback to FrameLayout */
+		try {
+			root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activityContext);
+			root.setBackgroundColor(Color.TRANSPARENT);
+		} catch (Exception e) {
+			root = new FrameLayout(activityContext);
+			root.setBackgroundColor(Color.TRANSPARENT);
+		}
 
 		LinearLayout mainContainer = new LinearLayout(activityContext);
 		mainContainer.setOrientation(1);
@@ -128,25 +139,52 @@ ListDialog(This config) {
 
 		GradientDrawable shape = new GradientDrawable();
 		shape.setCornerRadius(dp(28));
-		shape.setColor((int) tm.attr("colorSurfaceContainerHigh"));
+		int containerColor = (tm != null) ? (int) tm.attr("colorSurfaceContainerHigh") : Color.parseColor("#1F1F1F");
+		shape.setColor(containerColor);
 		mainContainer.setBackground(shape);
 		mainContainer.setClipToOutline(true);
 
+		/* Title - try MaterialToolbar, fallback to TextView */
 		if (title != null) {
-			MaterialToolbar toolbar = new MaterialToolbar(activityContext);
-			toolbar.setTitle(title);
-			toolbar.setTitleCentered(true);
-			mainContainer.addView(toolbar);
+			try {
+				com.google.android.material.appbar.MaterialToolbar toolbar = new com.google.android.material.appbar.MaterialToolbar(activityContext);
+				toolbar.setTitle(title);
+				toolbar.setTitleCentered(true);
+				mainContainer.addView(toolbar);
+			} catch (Exception e) {
+				TextView titleView = new TextView(activityContext);
+				titleView.setText(title);
+				titleView.setTextSize(18);
+				titleView.setTypeface(null, Typeface.BOLD);
+				titleView.setTextColor(Color.WHITE);
+				titleView.setGravity(Gravity.CENTER);
+				titleView.setPadding(dp(16), dp(16), dp(16), dp(16));
+				mainContainer.addView(titleView);
+			}
 		}
 
-		TextInputEditText filterInput = null;
+		/* Filter input - try TextInputLayout, fallback to plain EditText */
+		EditText filterInput = null;
 		if (showFilter) {
-			TextInputLayout filterWrapper = new TextInputLayout(activityContext);
-			filterWrapper.setHint("Search...");
-			filterWrapper.setBoxBackgroundMode(2);
-			filterInput = new TextInputEditText(filterWrapper.getContext());
-			filterWrapper.addView(filterInput);
-			mainContainer.addView(filterWrapper);
+			if (useMaterial) {
+				try {
+					com.google.android.material.textfield.TextInputLayout filterWrapper = new com.google.android.material.textfield.TextInputLayout(activityContext);
+					filterWrapper.setHint("Search...");
+					filterWrapper.setBoxBackgroundMode(2);
+					com.google.android.material.textfield.TextInputEditText filterEdit = new com.google.android.material.textfield.TextInputEditText(filterWrapper.getContext());
+					filterWrapper.addView(filterEdit);
+					mainContainer.addView(filterWrapper);
+					filterInput = filterEdit;
+				} catch (Exception e) {
+					filterInput = new EditText(activityContext);
+					filterInput.setHint("Search...");
+					mainContainer.addView(filterInput);
+				}
+			} else {
+				filterInput = new EditText(activityContext);
+				filterInput.setHint("Search...");
+				mainContainer.addView(filterInput);
+			}
 		}
 
 		ListView listView = new ListView(activityContext);
@@ -202,13 +240,15 @@ ListDialog(This config) {
 
 						t1 = new TextView(activityContext);
 						t1.setTextSize(16);
-						t1.setTextColor((int) tm.attr("colorOnSurface"));
+						int onSurfaceColor = (tm != null) ? (int) tm.attr("colorOnSurface") : Color.WHITE;
+						t1.setTextColor(onSurfaceColor);
 						t1.setEllipsize(TextUtils.TruncateAt.END);
 						tg.addView(t1);
 
 						t2 = new TextView(activityContext);
 						t2.setTextSize(14);
-						t2.setTextColor((int) tm.attr("colorOnSurfaceVariant"));
+						int onSurfaceVariantColor = (tm != null) ? (int) tm.attr("colorOnSurfaceVariant") : Color.parseColor("#AAAAAA");
+						t2.setTextColor(onSurfaceVariantColor);
 						tg.addView(t2);
 						row.addView(tg);
 
@@ -275,29 +315,58 @@ ListDialog(This config) {
 		bc.setGravity(Gravity.END);
 		bc.setPadding(0, dp(8), 0, 0);
 
-		MaterialButton cBtn = new MaterialButton(activityContext);
-		cBtn.setText("CANCEL");
-		cBtn.setOnClickListener(new View.OnClickListener() {
-			onClick(View v) {
-				if (hasCancel) config.onCancel();
-				remove();
-			}
-		});
-		bc.addView(cBtn);
-
-		if (isMulti) {
-			MaterialButton oBtn = new MaterialButton(activityContext);
-			LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
-			ol.leftMargin = dp(12);
-			oBtn.setLayoutParams(ol);
-			oBtn.setText("OK");
-			oBtn.setOnClickListener(new View.OnClickListener() {
+		/* Cancel button - try MaterialButton, fallback to Button */
+		try {
+			com.google.android.material.button.MaterialButton cBtn = new com.google.android.material.button.MaterialButton(activityContext);
+			cBtn.setText("CANCEL");
+			cBtn.setOnClickListener(new View.OnClickListener() {
 				onClick(View v) {
-					if (hasSuccessMulti) config.onSuccess(selectedItems);
+					if (hasCancel) config.onCancel();
 					remove();
 				}
 			});
-			bc.addView(oBtn);
+			bc.addView(cBtn);
+		} catch (Exception e) {
+			Button cBtn = new Button(activityContext);
+			cBtn.setText("CANCEL");
+			cBtn.setOnClickListener(new View.OnClickListener() {
+				onClick(View v) {
+					if (hasCancel) config.onCancel();
+					remove();
+				}
+			});
+			bc.addView(cBtn);
+		}
+
+		if (isMulti) {
+			/* OK button - try MaterialButton, fallback to Button */
+			try {
+				com.google.android.material.button.MaterialButton oBtn = new com.google.android.material.button.MaterialButton(activityContext);
+				LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
+				ol.leftMargin = dp(12);
+				oBtn.setLayoutParams(ol);
+				oBtn.setText("OK");
+				oBtn.setOnClickListener(new View.OnClickListener() {
+					onClick(View v) {
+						if (hasSuccessMulti) config.onSuccess(selectedItems);
+						remove();
+					}
+				});
+				bc.addView(oBtn);
+			} catch (Exception e) {
+				Button oBtn = new Button(activityContext);
+				LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
+				ol.leftMargin = dp(12);
+				oBtn.setLayoutParams(ol);
+				oBtn.setText("OK");
+				oBtn.setOnClickListener(new View.OnClickListener() {
+					onClick(View v) {
+						if (hasSuccessMulti) config.onSuccess(selectedItems);
+						remove();
+					}
+				});
+				bc.addView(oBtn);
+			}
 		}
 		
 		mainContainer.addView(bc);
@@ -346,7 +415,7 @@ ListDialog(This config) {
 			});
 		}
 		
-		root.addView(mainContainer);
+		((ViewGroup) root).addView(mainContainer);
 		activity.setContentView(root);
 
 		activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
@@ -385,44 +454,44 @@ ListDialog(This config) {
   ───────────────────────────────────────────────────────────────*/
 // a11Y.set();
 // dialog(This THIS) {
-// 	String title = "Select Actions";
-// 	boolean showFilter = true;
-// 	boolean multiSelect = true;
-// 	List preSelect = new ArrayList();
-// 	// 	preSelect.add("Flashlight");
-// 	long timeout = 30000;
-// 	List itemList = new ArrayList();
-// 	String[] titles = new String[] { "Wifi Toggle", "Bluetooth Toggle", "Flashlight", "Airplane Mode", "Do Not Disturb" };
-// 	String[] subs = new String[] { "System Action", "System Action", "Hardware Action", "Network Action", "Sound Action" };
+//		String title = "Select Actions";
+//		boolean showFilter = true;
+//		boolean multiSelect = true;
+//		List preSelect = new ArrayList();
+//		//		preSelect.add("Flashlight");
+//		long timeout = 30000;
+//		List itemList = new ArrayList();
+//		String[] titles = new String[] { "Wifi Toggle", "Bluetooth Toggle", "Flashlight", "Airplane Mode", "Do Not Disturb" };
+//		String[] subs = new String[] { "System Action", "System Action", "Hardware Action", "Network Action", "Sound Action" };
 
-// 	for (int i = 0; i < titles.length; i++) {
-// 		Map item = new HashMap();
-// 		item.put("title", titles[i]);
-// 		item.put("subtitle", subs[i]);
-// 		itemList.add(item);
-// // 		itemList.add(item);
-// // 		itemList.add(item);
-// 	}
+//		for (int i = 0; i < titles.length; i++) {
+//				Map item = new HashMap();
+//				item.put("title", titles[i]);
+//				item.put("subtitle", subs[i]);
+//				itemList.add(item);
+// //			itemList.add(item);
+// //			itemList.add(item);
+//		}
 
-// 	onSuccess(List list) {
-// 		THIS.result = list;
-// 		tasker.showToast(tasker.toJson(list, true));
-// 	}
+//		onSuccess(List list) {
+//				THIS.result = list;
+//				tasker.showToast(tasker.toJson(list, true));
+//		}
 
-// 	onSuccess(Map map) {
-// 		THIS.result = map;
-// 		tasker.showToast(tasker.toJson(map, true));
-// 	}
+//		onSuccess(Map map) {
+//				THIS.result = map;
+//				tasker.showToast(tasker.toJson(map, true));
+//		}
 
-// 	onCancel() {
-// 		tasker.showToast("Cancel");
-// 	}
-	
-// 	onTimeout() {
-// 		tasker.showToast("Timeout");
-// 	}
+//		onCancel() {
+//				tasker.showToast("Cancel");
+//		}
+		
+//		onTimeout() {
+//				tasker.showToast("Timeout");
+//		}
 
-// 	return this;
+//		return this;
 // }
 // This config = dialog(this);
 
