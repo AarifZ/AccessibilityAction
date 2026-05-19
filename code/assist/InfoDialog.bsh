@@ -1,5 +1,7 @@
 /*────────────────────────────────────────────────────────────────
-This code was primarily generated using AI with minimal human editing.
+InfoDialog with Fallback Support
+Uses Material Design when available, falls back to standard Android UI
+when Material Design library is stripped (e.g. Tasker App Factory export)
 ──────────────────────────────────────────────────────────────── */
 
 import android.content.ClipData;
@@ -27,20 +29,13 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.chip.Chip;
-import com.google.android.material.chip.ChipGroup;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
+import android.widget.Button;
+import android.widget.EditText;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import bsh.This;
-
-
 
 /*───────────────────────────────────────────────────────────────
   UTILITY METHODS
@@ -86,23 +81,66 @@ public Map getNodeData(Object node) {
 
 /*───────────────────────────────────────────────────────────────
   UI COMPONENT FACTORIES
-  Methods for creating reusable UI elements
+  Methods for creating reusable UI elements (with Material fallback)
   ───────────────────────────────────────────────────────────────*/
 
-public Chip createPropertyChip(Context ctx, String value, boolean isActive) {
-	final Chip chip = new Chip(ctx);
+public View createPropertyChip(Context ctx, String value, boolean isActive) {
+	/* Check Material availability */
+	boolean useMaterial = false;
+	try {
+		Class.forName("com.google.android.material.chip.Chip");
+		useMaterial = true;
+	} catch (Exception e) {
+		useMaterial = false;
+	}
+
+	if (useMaterial) {
+		try {
+			final com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(ctx);
+			final String valStr = value == null ? "null" : value;
+
+			chip.setText(valStr);
+			chip.setCheckable(false);
+			chip.setClickable(true);
+			chip.setChecked(isActive);
+			chip.setAlpha(isActive ? 1.0f : 0.4f);
+
+			chip.setOnClickListener(new View.OnClickListener() {
+				onClick(View v) {
+					vibrate(v);
+					chip.setChecked(isActive);
+					ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+					ClipData clip = ClipData.newPlainText("NodeData", valStr);
+					clipboard.setPrimaryClip(clip);
+					Toast.makeText(ctx, "Copied: " + valStr, Toast.LENGTH_SHORT).show();
+				}
+			});
+
+			return chip;
+		} catch (Exception e) {
+			/* Fall through to TextView fallback */
+		}
+	}
+
+	/* Fallback: Use TextView styled as a chip */
+	final TextView chipView = new TextView(ctx);
 	final String valStr = value == null ? "null" : value;
 
-	chip.setText(valStr);
-	chip.setCheckable(false);
-	chip.setClickable(true);
-	chip.setChecked(isActive);
-	chip.setAlpha(isActive ? 1.0f : 0.4f);
+	chipView.setText(valStr);
+	chipView.setTextSize(13);
+	chipView.setPadding(dp(12), dp(8), dp(12), dp(8));
+	chipView.setAlpha(isActive ? 1.0f : 0.4f);
 
-	chip.setOnClickListener(new View.OnClickListener() {
+	GradientDrawable chipBg = new GradientDrawable();
+	chipBg.setCornerRadius(dp(16));
+	chipBg.setColor(isActive ? Color.parseColor("#2C2C2C") : Color.parseColor("#1A1A1A"));
+	chipBg.setStroke(1, Color.parseColor("#444444"));
+	chipView.setBackground(chipBg);
+	chipView.setTextColor(Color.WHITE);
+
+	chipView.setOnClickListener(new View.OnClickListener() {
 		onClick(View v) {
 			vibrate(v);
-			chip.setChecked(isActive);
 			ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
 			ClipData clip = ClipData.newPlainText("NodeData", valStr);
 			clipboard.setPrimaryClip(clip);
@@ -110,22 +148,29 @@ public Chip createPropertyChip(Context ctx, String value, boolean isActive) {
 		}
 	});
 
-	return chip;
+	LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(
+		LinearLayout.LayoutParams.WRAP_CONTENT,
+		LinearLayout.LayoutParams.WRAP_CONTENT
+	);
+	chipParams.setMargins(0, dp(4), dp(8), dp(4));
+	chipView.setLayoutParams(chipParams);
+
+	return chipView;
 }
 
 /*───────────────────────────────────────────────────────────────
 	INFO DIALOG CLASS
 	InfoDialog(AccessibilityNodeInfo targetNode, Context ctx, int overlayType)
-  	Creates an info dialog for a given node
+	Creates an info dialog for a given node
 
 	Parameters:
 		targetNode: AccessibilityNodeInfo
 		ctx: Context
 		overlayType: int
-	
+		
 	Returns:
 		bsh.This InfoDialog
-	
+		
 	Methods:
 		- show() shows info dialog.
 		- remove() removes info dialog.
@@ -140,6 +185,15 @@ public This InfoDialog(AccessibilityNodeInfo targetNode, Context ctx, int overla
 	tm = ThemeManager(ctx);
 	tm.setThemeDark();
 	info = getNodeData(targetNode);
+
+	/* Check Material availability */
+	boolean useMaterial = false;
+	try {
+		Class.forName("com.google.android.material.chip.Chip");
+		useMaterial = true;
+	} catch (Exception e) {
+		useMaterial = false;
+	}
 
 	/*  ROOT CONTAINER SETUP */
 	final LinearLayout root = new LinearLayout(ctx);
@@ -170,57 +224,86 @@ public This InfoDialog(AccessibilityNodeInfo targetNode, Context ctx, int overla
 	content.setOrientation(LinearLayout.VERTICAL);
 	content.setPadding(40, 0, 40, 0);
 
-	/*  CHIP GROUP (Properties & Actions) */
-	ChipGroup chipGroup = new ChipGroup(ctx);
-	chipGroup.setChipSpacingVertical(0);
+	/*  CHIP GROUP (Properties & Actions) - try Material, fallback to FlowLayout-like LinearLayout */
+	View chipContainer;
+	if (useMaterial) {
+		try {
+			com.google.android.material.chip.ChipGroup chipGroup = new com.google.android.material.chip.ChipGroup(ctx);
+			chipGroup.setChipSpacingVertical(0);
 
-	chipGroup.addView(createPropertyChip(ctx, (String) info.get("id"), true));
-	chipGroup.addView(createPropertyChip(ctx, (String) info.get("class"), true));
-	chipGroup.addView(createPropertyChip(ctx, (String) info.get("bounds"), true));
-	chipGroup.addView(createPropertyChip(ctx, (String) info.get("coordinates"), true));
+			chipGroup.addView(createPropertyChip(ctx, (String) info.get("id"), true));
+			chipGroup.addView(createPropertyChip(ctx, (String) info.get("class"), true));
+			chipGroup.addView(createPropertyChip(ctx, (String) info.get("bounds"), true));
+			chipGroup.addView(createPropertyChip(ctx, (String) info.get("coordinates"), true));
 
-	String[] props = new String[] { "clickable", "enabled", "focusable", "scrollable" };
-	for (int i = 0; i < props.length; i++) {
-		boolean state = ((Boolean) info.get(props[i])).booleanValue();
-		chipGroup.addView(createPropertyChip(ctx, props[i], state));
-	}
-	chipGroup.addView(createPropertyChip(ctx, "Children: " + info.get("children"), true));
+			String[] props = new String[] { "clickable", "enabled", "focusable", "scrollable" };
+			for (int i = 0; i < props.length; i++) {
+				boolean state = ((Boolean) info.get(props[i])).booleanValue();
+				chipGroup.addView(createPropertyChip(ctx, props[i], state));
+			}
+			chipGroup.addView(createPropertyChip(ctx, "Children: " + info.get("children"), true));
 
-	/*  TEXT INPUT & SELECTION COPY */
-	if (info.get("text") != null && info.get("text").length() > 0) {
-		TextInputLayout textInput = new TextInputLayout(ctx);
-		final TextInputEditText edit = new TextInputEditText(ctx);
-		edit.setText(info.get("text").toString());
-		edit.setMaxLines(6);
-		edit.setShowSoftInputOnFocus(false);
-		textInput.addView(edit);
-		content.addView(textInput);
-		Chip copyTextChip = createPropertyChip(ctx, "Copy Text", true);
-		copyTextChip.setOnClickListener(new View.OnClickListener() {
-			onClick(View v) {
-				vibrate(v);
-				int start = edit.getSelectionStart();
-				int end = edit.getSelectionEnd();
-				String fullText = edit.getText().toString();
-				String toCopy = (start != end) ? fullText.substring(Math.min(start, end), Math.max(start, end)) : fullText;
+			/*  TEXT INPUT & SELECTION COPY */
+			if (info.get("text") != null && info.get("text").length() > 0) {
+				try {
+					com.google.android.material.textfield.TextInputLayout textInput = new com.google.android.material.textfield.TextInputLayout(ctx);
+					final com.google.android.material.textfield.TextInputEditText edit = new com.google.android.material.textfield.TextInputEditText(ctx);
+					edit.setText(info.get("text").toString());
+					edit.setMaxLines(6);
+					edit.setShowSoftInputOnFocus(false);
+					textInput.addView(edit);
+					content.addView(textInput);
+				} catch (Exception e) {
+					EditText edit = new EditText(ctx);
+					edit.setText(info.get("text").toString());
+					edit.setMaxLines(6);
+					edit.setShowSoftInputOnFocus(false);
+					edit.setBackgroundColor(Color.parseColor("#1e1e1e"));
+					edit.setTextColor(Color.WHITE);
+					content.addView(edit);
+				}
 
-				if (toCopy != null && !toCopy.equals("")) {
-					ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-					ClipData clip = ClipData.newPlainText("NodeData", toCopy);
-					clipboard.setPrimaryClip(clip);
-					String display = toCopy.length() > 20 ? toCopy.substring(0, 20) + "..." : toCopy;
-					showToast("Copied: " + display);
+				View copyTextChip = createPropertyChip(ctx, "Copy Text", true);
+				((View) copyTextChip).setOnClickListener(new View.OnClickListener() {
+					onClick(View v) {
+						vibrate(v);
+						if (info.get("text") != null && info.get("text").length() > 0) {
+							String toCopy = info.get("text").toString();
+							if (toCopy != null && !toCopy.equals("")) {
+								ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+								ClipData clip = ClipData.newPlainText("NodeData", toCopy);
+								clipboard.setPrimaryClip(clip);
+								String display = toCopy.length() > 20 ? toCopy.substring(0, 20) + "..." : toCopy;
+								showToast("Copied: " + display);
+							}
+						}
+					}
+				});
+				if (copyTextChip instanceof com.google.android.material.chip.Chip) {
+					((com.google.android.material.chip.ChipGroup) chipGroup).addView(copyTextChip, 0);
+				} else {
+					((LinearLayout) chipGroup).addView(copyTextChip, 0);
 				}
 			}
-		});
-		chipGroup.addView(copyTextChip, 0);
+			content.addView(chipGroup);
+			chipContainer = chipGroup;
+		} catch (Exception e) {
+			chipContainer = buildFallbackChipContainer(ctx, content, info, useMaterial);
+		}
+	} else {
+		chipContainer = buildFallbackChipContainer(ctx, content, info, useMaterial);
 	}
-	content.addView(chipGroup);
 
-	/*  CLOSE ACTION */
-	MaterialButton btn = new MaterialButton(ctx);
-	btn.setText("Close Inspector");
-	btn.setOnClickListener(new View.OnClickListener() {
+	/*  CLOSE ACTION - try MaterialButton, fallback to Button */
+	View closeBtn;
+	try {
+		closeBtn = new com.google.android.material.button.MaterialButton(ctx);
+		closeBtn.setText("Close Inspector");
+	} catch (Exception e) {
+		closeBtn = new Button(ctx);
+		closeBtn.setText("Close Inspector");
+	}
+	closeBtn.setOnClickListener(new View.OnClickListener() {
 		onClick(View v) {
 			vibrate(v);
 			wm.removeView(root);
@@ -229,7 +312,7 @@ public This InfoDialog(AccessibilityNodeInfo targetNode, Context ctx, int overla
 
 	scroller.addView(content);
 	root.addView(scroller, new LinearLayout.LayoutParams(-1, 0, 1.0f));
-	root.addView(btn);
+	root.addView(closeBtn);
 
 	/* WINDOW PARAMS & GESTURES */
 	final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
@@ -285,6 +368,63 @@ public This InfoDialog(AccessibilityNodeInfo targetNode, Context ctx, int overla
 	});
 
 	return this;
+}
+
+/* Helper to build fallback chip container using LinearLayout wrapping */
+buildFallbackChipContainer(Context ctx, LinearLayout content, Map info, boolean useMaterial) {
+	LinearLayout chipGroup = new LinearLayout(ctx);
+	chipGroup.setOrientation(LinearLayout.HORIZONTAL);
+	chipGroup.setGravity(Gravity.CENTER_HORIZONTAL);
+	chipGroup.setPadding(0, dp(8), 0, dp(8));
+
+	LinearLayout chipContainer = new LinearLayout(ctx);
+	chipContainer.setOrientation(LinearLayout.VERTICAL);
+	chipContainer.setPadding(dp(8), dp(8), dp(8), dp(8));
+
+	chipContainer.addView(createPropertyChip(ctx, (String) info.get("id"), true));
+	chipContainer.addView(createPropertyChip(ctx, (String) info.get("class"), true));
+	chipContainer.addView(createPropertyChip(ctx, (String) info.get("bounds"), true));
+	chipContainer.addView(createPropertyChip(ctx, (String) info.get("coordinates"), true));
+
+	String[] props = new String[] { "clickable", "enabled", "focusable", "scrollable" };
+	for (int i = 0; i < props.length; i++) {
+		boolean state = ((Boolean) info.get(props[i])).booleanValue();
+		chipContainer.addView(createPropertyChip(ctx, props[i], state));
+	}
+	chipContainer.addView(createPropertyChip(ctx, "Children: " + info.get("children"), true));
+
+	/* Text display for fallback */
+	if (info.get("text") != null && info.get("text").length() > 0) {
+		EditText edit = new EditText(ctx);
+		edit.setText(info.get("text").toString());
+		edit.setMaxLines(6);
+		edit.setShowSoftInputOnFocus(false);
+		edit.setBackgroundColor(Color.parseColor("#1e1e1e"));
+		edit.setTextColor(Color.WHITE);
+		edit.setTextColor(Color.WHITE);
+		content.addView(edit);
+
+		View copyTextChip = createPropertyChip(ctx, "Copy Text", true);
+		copyTextChip.setOnClickListener(new View.OnClickListener() {
+			onClick(View v) {
+				vibrate(v);
+				String toCopy = info.get("text").toString();
+				if (toCopy != null && !toCopy.equals("")) {
+					ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+					ClipData clip = ClipData.newPlainText("NodeData", toCopy);
+					clipboard.setPrimaryClip(clip);
+					String display = toCopy.length() > 20 ? toCopy.substring(0, 20) + "..." : toCopy;
+					showToast("Copied: " + display);
+				}
+			}
+		});
+		chipContainer.addView(copyTextChip, 0);
+	}
+
+	ScrollView chipScroller = new ScrollView(ctx);
+	chipScroller.addView(chipContainer);
+	content.addView(chipScroller);
+	return chipContainer;
 }
 
 public This InfoDialog(AccessibilityNodeInfo targetNode) {

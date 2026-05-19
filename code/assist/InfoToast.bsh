@@ -1,5 +1,7 @@
 /*────────────────────────────────────────────────────────────────
-This code was primarily generated using AI with minimal human editing.
+InfoToast with Fallback Support
+Custom overlay toast for given accessibility node.
+ThemeManager failures are handled gracefully with hardcoded fallback colors.
 ──────────────────────────────────────────────────────────────── */
 
 import android.content.Context;
@@ -16,7 +18,6 @@ import android.widget.LinearLayout;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
-import com.joaomgcd.taskerm.action.java.JavaCodeException;
 import bsh.This;
 import android.text.TextUtils;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.HashMap;
 /*────────────────────────────────────────────────────────────────
 	InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType)
 	Custom class to manage the InfoToast overlay for given node.
+	With graceful fallback when ThemeManager fails.
 
 	Parameters:
 		node: AccessibilityNodeInfo
@@ -80,15 +82,20 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 	/* Row storage */
 	final Map rows = new HashMap();
 
-	/* Theme */
-	final This tm = ThemeManager(overlayContext);
-	tm.setThemeDark();
+	/* Theme with fallback colors */
+	This tm = null;
+	try {
+		tm = ThemeManager(overlayContext);
+		tm.setThemeDark();
+	} catch (Exception e) {
+		tasker.log("ThemeManager unavailable for InfoToast, using fallback colors");
+	}
 
-	final int primaryColor = tm.attr("colorPrimary");
-	final int onSurfaceColor = tm.attr("colorOnSurface");
-	final int secondaryColor = tm.attr("colorSecondary");
-	final int surfaceColor = tm.attr("colorSurfaceContainerHigh");
-	final int outlineColor = tm.attr("colorOutline");
+	final int primaryColor = tm != null ? (int) tm.attr("colorPrimary") : Color.parseColor("#6200EA");
+	final int onSurfaceColor = tm != null ? (int) tm.attr("colorOnSurface") : Color.WHITE;
+	final int secondaryColor = tm != null ? (int) tm.attr("colorSecondary") : Color.parseColor("#03DAC6");
+	final int surfaceColor = tm != null ? (int) tm.attr("colorSurfaceContainerHigh") : Color.parseColor("#1F1F1F");
+	final int outlineColor = tm != null ? (int) tm.attr("colorOutline") : Color.parseColor("#79747E");
 
 	/* Node data */
 	final Rect bounds = new Rect();
@@ -113,32 +120,36 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 	bg.setColor(surfaceColor);
 	bg.setCornerRadius(12f);
 	bg.setStroke(3, outlineColor);
-	container.setBackgroundDrawable(bg);
+	container.setBackground(bg);
 
 	/*──────────── ROW SYSTEM ────────────*/
 	addRow(String key, String label, String value, int maxLines, int color) {
 		mainHandler.post(new Runnable() {
 			run() {
-				TextView rowText = (TextView) rows.get(key);
-				// Add directly
-				boolean isFirst = (container.getChildCount() == 0);
-				int topMargin = isFirst ? 0 : dp(2);
-				LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-				params.setMargins(0, topMargin, 0, 0);				
-				if (rowText == null) {
-					rowText = new TextView(overlayContext);
-					rowText.setLayoutParams(params);
-					rowText.setTextSize(11.5f);
-					rowText.setMaxLines(maxLines);
-					rowText.setEllipsize(TextUtils.TruncateAt.MARQUEE);
-					container.addView(rowText);
-					rows.put(key, rowText);
+				try {
+					TextView rowText = (TextView) rows.get(key);
+					// Add directly
+					boolean isFirst = (container.getChildCount() == 0);
+					int topMargin = isFirst ? 0 : dp(2);
+					LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+					params.setMargins(0, topMargin, 0, 0);                          
+					if (rowText == null) {
+						rowText = new TextView(overlayContext);
+						rowText.setLayoutParams(params);
+						rowText.setTextSize(11.5f);
+						rowText.setMaxLines(maxLines);
+						rowText.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+						container.addView(rowText);
+						rows.put(key, rowText);
+					}
+
+					rowText.setText(label + ": " + value);
+					rowText.setTextColor(color);
+
+					refreshPosition();
+				} catch (Exception e) {
+					tasker.log("Row add error: " + e.getMessage());
 				}
-
-				rowText.setText(label + ": " + value);
-				rowText.setTextColor(color);
-
-				refreshPosition();
 			}
 		});
 	}
@@ -154,14 +165,16 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 	updateRow(String key, String value) {
 		mainHandler.post(new Runnable() {
 			run() {
-				TextView rowText = (TextView) rows.get(key);
-				if (rowText != null) {
-					String text = rowText.getText().toString();
-					int idx = text.indexOf(":");
-					String label = idx != -1 ? text.substring(0, idx) : key;
-					rowText.setText(label + ": " + value);
-					refreshPosition();
-				}
+				try {
+					TextView rowText = (TextView) rows.get(key);
+					if (rowText != null) {
+						String text = rowText.getText().toString();
+						int idx = text.indexOf(":");
+						String label = idx != -1 ? text.substring(0, idx) : key;
+						rowText.setText(label + ": " + value);
+						refreshPosition();
+					}
+				} catch (Exception e) {}
 			}
 		});
 	}
@@ -169,12 +182,14 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 	removeRow(String key) {
 		mainHandler.post(new Runnable() {
 			run() {
-				TextView rowText = (TextView) rows.get(key);
-				if (rowText != null) {
-					container.removeView(rowText);
-					rows.remove(key);
-					refreshPosition();
-				}
+				try {
+					TextView rowText = (TextView) rows.get(key);
+					if (rowText != null) {
+						container.removeView(rowText);
+						rows.remove(key);
+						refreshPosition();
+					}
+				} catch (Exception e) {}
 			}
 		});
 	}
@@ -182,9 +197,11 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 	clearRows() {
 		mainHandler.post(new Runnable() {
 			run() {
-				container.removeAllViews();
-				rows.clear();
-				refreshPosition();
+				try {
+					container.removeAllViews();
+					rows.clear();
+					refreshPosition();
+				} catch (Exception e) {}
 			}
 		});
 	}
@@ -214,36 +231,40 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 	params.gravity = Gravity.TOP | Gravity.LEFT;
 
 	refreshPosition() {
-		container.measure(
-			View.MeasureSpec.makeMeasureSpec(screenWidth, View.MeasureSpec.AT_MOST),
-			View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-		);
-
-		int mWidth = container.getMeasuredWidth();
-		int mHeight = container.getMeasuredHeight();
-
-		params.width = mWidth;
-		params.height = mHeight;
-
-		int calcX = bounds.left;
-		if (calcX + mWidth > screenWidth) {
-			calcX = bounds.right - mWidth;
-		}
-
-		int calcY = bounds.top - mHeight;
-		if (calcY < statusBarHeight) {
-			calcY = bounds.bottom;
-		}
-		if (calcY + mHeight > screenHeight) {
-			calcY = screenHeight - mHeight;
-		}
-
-		params.x = calcX;
-		params.y = calcY;
-
 		try {
-			windowManager.updateViewLayout(container, params);
-		} catch (Exception e) {}
+			container.measure(
+				View.MeasureSpec.makeMeasureSpec(screenWidth, View.MeasureSpec.AT_MOST),
+				View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+			);
+
+			int mWidth = container.getMeasuredWidth();
+			int mHeight = container.getMeasuredHeight();
+
+			params.width = mWidth;
+			params.height = mHeight;
+
+			int calcX = bounds.left;
+			if (calcX + mWidth > screenWidth) {
+				calcX = bounds.right - mWidth;
+			}
+
+			int calcY = bounds.top - mHeight;
+			if (calcY < statusBarHeight) {
+				calcY = bounds.bottom;
+			}
+			if (calcY + mHeight > screenHeight) {
+				calcY = screenHeight - mHeight;
+			}
+
+			params.x = calcX;
+			params.y = calcY;
+
+			try {
+				windowManager.updateViewLayout(container, params);
+			} catch (Exception e) {}
+		} catch (Exception e) {
+			tasker.log("Position refresh error: " + e.getMessage());
+		}
 	}
 
 	/*──────────── SHOW ────────────*/
@@ -253,12 +274,16 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 		onViewAttachedToWindow(View v) {
 			isRemoved = false;
 			isShown = true;
-			a11Y.addOverlay(TOP);
+			try {
+				a11Y.addOverlay(TOP);
+			} catch (Exception e) {}
 		}
 		onViewDetachedFromWindow(View v) {
 			isRemoved = true;
 			isShown = false;
-			a11Y.removeOverlay(TOP);
+			try {
+				a11Y.removeOverlay(TOP);
+			} catch (Exception e) {}
 		}
 	});
 
@@ -279,7 +304,11 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 	show() {
 		mainHandler.post(new Runnable() {
 			run() {
-				windowManager.addView(container, params);
+				try {
+					windowManager.addView(container, params);
+				} catch (Exception e) {
+					tasker.log("InfoToast show error: " + e.getMessage());
+				}
 			}
 		});
 	}

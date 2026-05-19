@@ -1,4 +1,5 @@
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.Drawable;
@@ -16,9 +17,9 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 
-import com.google.android.material.button.MaterialButton;
-import com.joaomgcd.taskerm.action.java.JavaCodeException;
 import android.accessibilityservice.AccessibilityService;
 
 import java.util.ArrayList;
@@ -27,7 +28,9 @@ import java.util.List;
 import bsh.This;
 
 /*───────────────────────────────────────────────────────────────
-  dp(int value)
+  AssistButton with Fallback Support
+  Uses Material Design when available, falls back to ImageButton
+  when Material Design library is stripped (e.g. Tasker App Factory export)
   ───────────────────────────────────────────────────────────────*/
 public int dp(int value) {
 	return (int) TypedValue.applyDimension(
@@ -44,7 +47,17 @@ public This AssistButton(int initialX, int initialY) {
 	This a11Y = tasker.getJavaVariable("a11Y");
 	final AccessibilityService accessibilityService = getService();
 	if (accessibilityService == null) {
-		throw new JavaCodeException("Accessibility Service not running.");
+		tasker.showToast("Accessibility Service not running.");
+		return null;
+	}
+
+	/* Check Material Design availability */
+	boolean useMaterial = false;
+	try {
+		Class.forName("com.google.android.material.button.MaterialButton");
+		useMaterial = true;
+	} catch (Exception e) {
+		useMaterial = false;
 	}
 
 	boolean useA11y = true;
@@ -59,15 +72,32 @@ public This AssistButton(int initialX, int initialY) {
 		return activeStructure != null && activeStructure.isRemoved();
 	}
 
-	setButtonColorState(MaterialButton btn, boolean isActive) {
-		int backgroundColor = tm.attr("colorPrimary");
-		int iconColor = tm.attr("colorOnPrimary");
-		if (!isActive) {
-			backgroundColor = Color.TRANSPARENT;
-			iconColor = tm.attr("colorOnSurface");
+	/* ThemeManager with fallback */
+	This tm = null;
+	try {
+		tm = ThemeManager(getContext(useA11y));
+		tm.setThemeDark();
+	} catch (Exception e) {
+		tasker.log("ThemeManager unavailable for AssistButton");
+	}
+
+	setButtonColorState(Object btn, boolean isActive) {
+		int backgroundColor;
+		int iconColor;
+		if (useMaterial) {
+			backgroundColor = isActive ? (int) tm.attr("colorPrimary") : Color.TRANSPARENT;
+			iconColor = isActive ? (int) tm.attr("colorOnPrimary") : (int) tm.attr("colorOnSurface");
+			((com.google.android.material.button.MaterialButton) btn).setSupportBackgroundTintList(ColorStateList.valueOf(backgroundColor));
+			((com.google.android.material.button.MaterialButton) btn).setIconTint(ColorStateList.valueOf(iconColor));
+		} else {
+			/* For ImageButton fallback, adjust the background */
+			backgroundColor = isActive ? (int) tm.attr("colorPrimary") : (int) tm.attr("colorSurfaceContainerHighest");
+			iconColor = isActive ? (int) tm.attr("colorOnPrimary") : (int) tm.attr("colorOnSurface");
+			((View) btn).setBackgroundColor(backgroundColor);
+			if (btn instanceof ImageView) {
+				((ImageView) btn).setColorFilter(iconColor);
+			}
 		}
-		btn.setSupportBackgroundTintList(android.content.res.ColorStateList.valueOf(backgroundColor));
-		btn.setIconTint(android.content.res.ColorStateList.valueOf(iconColor));
 	}
 
 	Context assistContext = getContext(useA11y);
@@ -77,10 +107,6 @@ public This AssistButton(int initialX, int initialY) {
 		WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY :
 		WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
 
-	/* THEME */
-	This tm = ThemeManager(assistContext);
-	tm.setThemeDark();
-
 	/* ROOT & CONTAINER SETUP */
 	FrameLayout assistButton = new FrameLayout(assistContext);
 	LinearLayout container = new LinearLayout(assistContext);
@@ -89,7 +115,8 @@ public This AssistButton(int initialX, int initialY) {
 	GradientDrawable bg = new GradientDrawable();
 	bg.setShape(GradientDrawable.RECTANGLE);
 	bg.setCornerRadius(dp(28));
-	bg.setColor(tm.attr("colorSurfaceContainerHighest"));
+	int containerColor = (tm != null) ? (int) tm.attr("colorSurfaceContainerHighest") : Color.parseColor("#2C2C2C");
+	bg.setColor(containerColor);
 	int padding = dp(4);
 	container.setBackground(bg);
 	container.setPadding(padding, padding, padding, padding);
@@ -117,7 +144,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  UTILITY METHODS
-	────────────────────────────*/
+	───────────────────────────*/
 
 	removeStructure() {
 		if (activeStructure != null && !activeStructure.isRemoved()) {
@@ -154,19 +181,45 @@ public This AssistButton(int initialX, int initialY) {
 	}
 
 	IconButton(Drawable drawable, boolean isActive) {
-		MaterialButton button = new MaterialButton(assistContext);
-		button.setIcon(drawable);
-		button.setIconSize(dp(24));
-		button.setIconPadding(0);
-		button.setInsetTop(0);
-		button.setInsetBottom(0);
-		button.setMinimumWidth(0);
-		button.setMinimumHeight(0);
-		button.setWidth(dp(40));
-		button.setHeight(dp(40));
-		button.setPadding(0, 0, 0, 0);
-		button.setGravity(Gravity.CENTER);
-		button.setIconGravity(2);
+		Object button;
+		if (useMaterial) {
+			try {
+				com.google.android.material.button.MaterialButton matBtn = new com.google.android.material.button.MaterialButton(assistContext);
+				matBtn.setIcon(drawable);
+				matBtn.setIconSize(dp(24));
+				matBtn.setIconPadding(0);
+				matBtn.setInsetTop(0);
+				matBtn.setInsetBottom(0);
+				matBtn.setMinimumWidth(0);
+				matBtn.setMinimumHeight(0);
+				matBtn.setWidth(dp(40));
+				matBtn.setHeight(dp(40));
+				matBtn.setPadding(0, 0, 0, 0);
+				matBtn.setGravity(Gravity.CENTER);
+				matBtn.setIconGravity(2);
+				button = matBtn;
+			} catch (Exception e) {
+				/* Fall through to ImageButton fallback */
+				button = null;
+			}
+		}
+
+		if (button == null) {
+			ImageButton imgBtn = new ImageButton(assistContext);
+			imgBtn.setImageDrawable(drawable);
+			imgBtn.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+			imgBtn.setBackgroundColor(Color.TRANSPARENT);
+			imgBtn.setPadding(dp(8), dp(8), dp(8), dp(8));
+			/* Set fixed size */
+			imgBtn.setMinimumWidth(dp(40));
+			imgBtn.setMinimumHeight(dp(40));
+			imgBtn.setMaxWidth(dp(40));
+			imgBtn.setMaxHeight(dp(40));
+			LinearLayout.LayoutParams imgBtnParams = new LinearLayout.LayoutParams(dp(40), dp(40));
+			imgBtn.setLayoutParams(imgBtnParams);
+			button = imgBtn;
+		}
+
 		setButtonColorState(button, isActive);
 
 		int margin = padding;
@@ -174,9 +227,9 @@ public This AssistButton(int initialX, int initialY) {
 		int rightMargin = isFirst ? 0 : margin;
 		LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(40), -1);
 		lp.setMargins(0, 0, rightMargin, 0);
-		button.setLayoutParams(lp);
+		((View) button).setLayoutParams(lp);
 
-		container.addView(button, 0);
+		container.addView((View) button, 0);
 		buttons.add(button);
 		refreshSize();
 		return button;
@@ -184,14 +237,38 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  HANDLE
-	────────────────────────────*/
-	MaterialButton handle = IconButton(tm.attr("mw_image_filter_center_focus"), true);
+	───────────────────────────*/
+	/* Get drawables with fallback */
+	Drawable focusIcon = null;
+	Drawable codeIcon = null;
+	Drawable settingsIcon = null;
+	Drawable closeIcon = null;
+
+	if (tm != null) {
+		try { focusIcon = (Drawable) tm.attr("mw_image_filter_center_focus"); } catch (Exception e) {}
+		try { codeIcon = (Drawable) tm.attr("mw_action_code"); } catch (Exception e) {}
+		try { settingsIcon = (Drawable) tm.attr("mw_action_settings"); } catch (Exception e) {}
+		try { closeIcon = (Drawable) tm.attr("mw_navigation_close"); } catch (Exception e) {}
+	}
+
+	/* Fallback: use Android system drawables if theme attrs don't provide them */
+	Context iconContext = assistContext;
+	int focusId = iconContext.getResources().getIdentifier("ic_menu_view", "drawable", "android");
+	int codeId = iconContext.getResources().getIdentifier("ic_menu_edit", "drawable", "android");
+	int settingsId = iconContext.getResources().getIdentifier("ic_menu_preferences", "drawable", "android");
+	int closeId = iconContext.getResources().getIdentifier("ic_menu_close_clear_cancel", "drawable", "android");
+	if (focusId != 0 && focusIcon == null) focusIcon = iconContext.getDrawable(focusId);
+	if (codeId != 0 && codeIcon == null) codeIcon = iconContext.getDrawable(codeId);
+	if (settingsId != 0 && settingsIcon == null) settingsIcon = iconContext.getDrawable(settingsId);
+	if (closeId != 0 && closeIcon == null) closeIcon = iconContext.getDrawable(closeId);
+
+	Object handle = IconButton(focusIcon, true);
 
 	/*────────────────────────────
 	  Edit Button - Adjusted Toggle
-	────────────────────────────*/
-	MaterialButton scriptBtn = IconButton(tm.attr("mw_action_code"), false);
-	scriptBtn.setOnClickListener(new View.OnClickListener() {
+	───────────────────────────*/
+	Object scriptBtn = IconButton(codeIcon, false);
+	((View) scriptBtn).setOnClickListener(new View.OnClickListener() {
 		onClick(View view) {
 			assistSetting.remove();
 			removeStructure();
@@ -201,9 +278,9 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  Settings Button - Adjusted Dismissal
-	────────────────────────────*/
-	MaterialButton settingBtn = IconButton(tm.attr("mw_action_settings"), false);
-	settingBtn.setOnClickListener(new View.OnClickListener() {
+	───────────────────────────*/
+	Object settingBtn = IconButton(settingsIcon, false);
+	((View) settingBtn).setOnClickListener(new View.OnClickListener() {
 		onClick(View view) {
 			scriptEditor.remove();
 			removeStructure();
@@ -213,9 +290,9 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  Close Button
-	────────────────────────────*/
-	MaterialButton closeBtn = IconButton(tm.attr("mw_navigation_close"), false);
-	closeBtn.setOnClickListener(new View.OnClickListener() {
+	───────────────────────────*/
+	Object closeBtn = IconButton(closeIcon, false);
+	((View) closeBtn).setOnClickListener(new View.OnClickListener() {
 		onClick(View view) {
 			scriptEditor.remove();
 			removeStructure();
@@ -225,7 +302,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  DRAG & REMOVE LOGIC
-	────────────────────────────*/
+	───────────────────────────*/
 	float initialTouchX;
 	float initialTouchY;
 	int initialWinX;
@@ -299,10 +376,10 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  HANDLE LISTENER
-	────────────────────────────*/
+	───────────────────────────*/
 	handleListener() {
 		onLongPress() {
-			vibrate(assistButton);
+			try { vibrate(assistButton); } catch (Exception e) {}
 			displayStructureWithA11y();
 		}
 		onSingleTapConfirmed() {
@@ -316,7 +393,7 @@ public This AssistButton(int initialX, int initialY) {
 		return this;
 	}
 
-	This handleGesture = SimpleGesture(handle, handleListener());
+	This handleGesture = SimpleGesture((View) handle, handleListener());
 
 	move(View view, MotionEvent event) {
 		switch (event.getAction()) {
@@ -341,7 +418,7 @@ public This AssistButton(int initialX, int initialY) {
 		return false;
 	}
 
-	handle.setOnTouchListener(new View.OnTouchListener() {
+	((View) handle).setOnTouchListener(new View.OnTouchListener() {
 		onTouch(View view, MotionEvent event) {
 			detector.onTouchEvent(event);
 			move(view, event);

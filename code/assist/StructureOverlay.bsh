@@ -1,5 +1,7 @@
 /*────────────────────────────────────────────────────────────────
-	This code was generated using AI with minimal human editing.
+StructureOverlay with Fallback Support
+Custom class to manage the structure of given root node.
+With safe exception handling when Tasker-specific classes are unavailable.
 ──────────────────────────────────────────────────────────────── */
 
 import android.content.Context;
@@ -16,8 +18,6 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
 import android.os.Handler;
 import android.os.Looper;
-import com.joaomgcd.taskerm.action.java.ClassImplementation;
-import com.joaomgcd.taskerm.action.java.JavaCodeException;
 import java.util.concurrent.Callable;
 import java.util.List;
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ import android.view.ViewParent;
 		- highlightNode(AccessibilityNodeInfo node) highlights the node
 		- addHistory(This nodeBox) adds the node box to history
 		- highlightNodes(List nodes) highlights the nodes in the list
-	
+		
 	Notes:
 		- All highlight nodes will soon to be deprecated. Replaced with NodesFinder which is improved version of SimilarNodes
 
@@ -75,7 +75,9 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 
 	final Object accessibilityService = getService();
 	if (accessibilityService == null) {
-		throw new JavaCodeException("Accessibility Service not running.");
+		/* Use safe error reporting instead of JavaCodeException which may not be available */
+		tasker.showToast("Accessibility Service not running.");
+		return null;
 	}
 
 	Context overlayContext = getContext(useA11y);
@@ -86,8 +88,14 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 		WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY :
 		WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
 
-	This tm = ThemeManager(overlayContext);
-	tm.setThemeDark();
+	/* ThemeManager with fallback */
+	This tm = null;
+	try {
+		tm = ThemeManager(overlayContext);
+		tm.setThemeDark();
+	} catch (Exception e) {
+		tasker.log("ThemeManager unavailable for StructureOverlay, using defaults");
+	}
 
 	setAlpha(int color, int alpha) {
 		return (alpha << 24) | (color & 0x00ffffff);
@@ -113,24 +121,32 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 	}
 
 	remove() {
-		if (activeBox != null) activeBox.reset();
-		windowManager.removeView(rootLayout);
+		try {
+			if (activeBox != null) activeBox.reset();
+		} catch (Exception e) {}
+		try {
+			windowManager.removeView(rootLayout);
+		} catch (Exception e) {}
 	}
 
 	rootLayout.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
 		public void onViewAttachedToWindow(View view) {
 			isRemoved = false;
 			isShown = true;
-			if (tasker.getJavaVariable("structureOverlay") != null) structureOverlay.remove();
-			tasker.setJavaVariable("structureOverlay", TOP);
-			a11Y.addOverlay(this);
+			try {
+				if (tasker.getJavaVariable("structureOverlay") != null) structureOverlay.remove();
+				tasker.setJavaVariable("structureOverlay", TOP);
+				a11Y.addOverlay(this);
+			} catch (Exception e) {}
 		}
 
 		public void onViewDetachedFromWindow(View view) {
 			isRemoved = true;
 			isShown = false;
-			tasker.setJavaVariable("structureOverlay", null);
-			a11Y.removeOverlay(this);
+			try {
+				tasker.setJavaVariable("structureOverlay", null);
+				a11Y.removeOverlay(this);
+			} catch (Exception e) {}
 		}
 	});
 
@@ -192,7 +208,9 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 	unhideBoxes() {
 		if (hiddenBoxes.isEmpty()) return;
 		for (This hidden: hiddenBoxes) {
-			hidden.unhide();
+			try {
+				hidden.unhide();
+			} catch (Exception e) {}
 		}
 		hiddenBoxes.clear();
 	}
@@ -201,19 +219,33 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 		if (activeBox != null) activeBox.reset();
 		activeBox = this;
 		AccessibilityNodeInfo node = nodeBox.node;
-		int fillColor = setAlpha(tm.attr("colorPrimary"), 150);
-		int strokeColor = tm.attr("colorPrimary");
+		int fillColor = 0;
+		int strokeColor = 0;
+		try {
+			fillColor = setAlpha(tm.attr("colorPrimary"), 150);
+			strokeColor = tm.attr("colorPrimary");
+		} catch (Exception e) {
+			fillColor = setAlpha(Color.parseColor("#6200EA"), 150);
+			strokeColor = Color.parseColor("#6200EA");
+		}
 		nodeBox.setColor(5, strokeColor, fillColor);
 		nodeBox.showInfo();
 
-		activeSimilar = SimilarNodes(rootNode, nodeBoxMap, nodeBox);
-		activeSimilar.highlightAll();
-		String similarText = activeSimilar.getSimilarText();
-		if (similarText != null) nodeBox.infoToast.addRow("similar", "Similar", similarText);
+		try {
+			activeSimilar = SimilarNodes(rootNode, nodeBoxMap, nodeBox);
+			activeSimilar.highlightAll();
+			String similarText = activeSimilar.getSimilarText();
+			if (similarText != null) nodeBox.infoToast.addRow("similar", "Similar", similarText);
+		} catch (Exception e) {
+			tasker.log("SimilarNodes error: " + e.getMessage());
+		}
+
 		reset() {
 			activeBox = null;
 			nodeBox.reset();
-			activeSimilar.reset();
+			try {
+				if (activeSimilar != null) activeSimilar.reset();
+			} catch (Exception e) {}
 		}
 		return this;
 	}
@@ -230,10 +262,10 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 		onSingleTapConfirmed(This nodeBox) {
 			addHistory(nodeBox);
 			if (activeBox != null && activeBox.node.equals(nodeBox.node)) {
-				// 				removeHelper();
+				//				removeHelper();
 				activeBox.reset();
 			} else {
-				// 				removeHelper();
+				//				removeHelper();
 				if (activeBox != null) activeBox.reset();
 				activeHighlight(nodeBox);
 			}
@@ -252,14 +284,14 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 		}
 
 		onFling(This nodeBox) {
-			vibrate(nodeBox.view);
+			try { vibrate(nodeBox.view); } catch (Exception e) {}
 			addHistory(nodeBox);
 			hideBox(nodeBox);
 			return true;
 		}
 
 		onLongPress(This nodeBox) {
-			vibrate(nodeBox.view);
+			try { vibrate(nodeBox.view); } catch (Exception e) {}
 			addHistory(nodeBox);
 			if (tasker.getJavaVariable("a11Y").quickAddMode) {
 				remove();
@@ -301,11 +333,15 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 
 			if (!bounds.isEmpty() && bounds.width() > 2 && bounds.height() > 2) {
 				int area = bounds.width() * bounds.height();
-				This nodeBox = NodeBox(overlayContext, overlayType, node);
-				nodeBox.setGestureListener(listener);
-				nodeBox.setTouchable(nodeBoxTouchable);
-				nodeList.add(new Object[] { depth, area, nodeBox });
-				nodeBoxMap.put(node, nodeBox);
+				try {
+					This nodeBox = NodeBox(overlayContext, overlayType, node);
+					nodeBox.setGestureListener(listener);
+					nodeBox.setTouchable(nodeBoxTouchable);
+					nodeList.add(new Object[] { depth, area, nodeBox });
+					nodeBoxMap.put(node, nodeBox);
+				} catch (Exception e) {
+					tasker.log("NodeBox creation failed: " + e.getMessage());
+				}
 			}
 			for (int i = 0; i < node.getChildCount(); i++) {
 				AccessibilityNodeInfo child = node.getChild(i);
@@ -336,12 +372,16 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 		windowManager.addView(rootLayout, rootParams);
 		Runnable showRun = new Runnable() {
 			run() {
-				int[] loc = new int[2];
-				rootLayout.getLocationOnScreen(loc);
-				for (int i = 0; i < nodeList.size(); i++) {
-					Object[] wrap = nodeList.get(i);
-					This nodeBox = wrap[2];
-					nodeBox.addViewTo(rootLayout);
+				try {
+					int[] loc = new int[2];
+					rootLayout.getLocationOnScreen(loc);
+					for (int i = 0; i < nodeList.size(); i++) {
+						Object[] wrap = nodeList.get(i);
+						This nodeBox = wrap[2];
+						nodeBox.addViewTo(rootLayout);
+					}
+				} catch (Exception e) {
+					tasker.log("Show error: " + e.getMessage());
 				}
 			}
 		};
@@ -356,25 +396,29 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 		if (listener == null) listener = getDefaultListener();
 		Runnable showRun = new Runnable() {
 			run() {
-				windowManager.addView(rootLayout, rootParams);
-				int[] loc = new int[2];
-				rootLayout.getLocationOnScreen(loc);
-				for (Object nodeItem: nodes) {
-					if (nodeItem instanceof This) {
-						This nodeBox = nodeItem;
-						nodeBox.setGestureListener(listener);
-						nodeBox.setTouchable(nodeBoxTouchable);
-						nodeBox.addViewTo(rootLayout);
-						nodeBoxMap.put(nodeBox.node, nodeBox);
-					} else if (nodeItem instanceof AccessibilityNodeInfo) {
-						AccessibilityNodeInfo node = nodeItem;
-						This nodeBox = NodeBox(overlayContext, overlayType, node);
-						nodeBox.setGestureListener(listener);
-						nodeBox.setTouchable(nodeBoxTouchable);
-						nodeBox.addViewTo(rootLayout);
-						nodeBoxMap.put(node, nodeBox);
-					}
+				try {
+					windowManager.addView(rootLayout, rootParams);
+					int[] loc = new int[2];
+					rootLayout.getLocationOnScreen(loc);
+					for (Object nodeItem: nodes) {
+						if (nodeItem instanceof This) {
+							This nodeBox = nodeItem;
+							nodeBox.setGestureListener(listener);
+							nodeBox.setTouchable(nodeBoxTouchable);
+							nodeBox.addViewTo(rootLayout);
+							nodeBoxMap.put(nodeBox.node, nodeBox);
+						} else if (nodeItem instanceof AccessibilityNodeInfo) {
+							AccessibilityNodeInfo node = nodeItem;
+							This nodeBox = NodeBox(overlayContext, overlayType, node);
+							nodeBox.setGestureListener(listener);
+							nodeBox.setTouchable(nodeBoxTouchable);
+							nodeBox.addViewTo(rootLayout);
+							nodeBoxMap.put(node, nodeBox);
+						}
 
+					}
+				} catch (Exception e) {
+					tasker.log("List show error: " + e.getMessage());
 				}
 			}
 		};
@@ -427,7 +471,8 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 StructureOverlay(boolean useA11y) {
 	AccessibilityNodeInfo rootNode = (AccessibilityNodeInfo) getRoot();
 	if (rootNode == null) {
-		throw new JavaCodeException("Could not get root node.");
+		tasker.showToast("Could not get root node.");
+		return null;
 	}
 	return StructureOverlay(rootNode, useA11y);
 }
