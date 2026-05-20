@@ -1,33 +1,20 @@
-/*───────────────────────────────────────────────────────────────
+/*─────────────────────────────────────────────────────────────── 
 This code was primarily generated using AI with minimal human editing.
 ───────────────────────────────────────────────────────────────*/
 
 import android.accessibilityservice.AccessibilityService;
+if (RUNNING_ENV == "TASKER") {
+	import com.joaomgcd.taskerm.action.java.JavaCodeException;
+}
 
 // === Get accessibility service ===
-// Works in both Tasker and exported App Factory environments.
-// Tries Tasker API first, then checks if context itself is the service.
-// Returns null (never void) if service is unavailable.
 AccessibilityService getService() {
-	try {
+	if (RUNNING_ENV == "TASKER") {
 		AccessibilityService service = tasker.getAccessibilityService();
-		if (service != null) return service;
-	} catch (Exception e) {
-		// tasker API not available
+		if (service == null) throw new JavaCodeException("Accessibility service not active!");
+		return service;
+	} else {
+		return;
 	}
-
-	// Fallback: check if context is the AccessibilityService (exported app)
-	try {
-		if (context instanceof AccessibilityService) {
-			return (AccessibilityService) context;
-		}
-	} catch (Exception e) {}
-
-	// Last resort: try direct field access (some Kid environments)
-	try {
-		Object svc = tasker.getAccessibilityService();
-		if (svc != null) return (AccessibilityService) svc;
-	} catch (Exception e) {}
-
-	return null;
+		
 }
