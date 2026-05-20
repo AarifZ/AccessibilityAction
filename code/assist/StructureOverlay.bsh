@@ -201,8 +201,8 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 		if (activeBox != null) activeBox.reset();
 		activeBox = this;
 		AccessibilityNodeInfo node = nodeBox.node;
-		int fillColor = setAlpha(tm.attr("colorPrimary"), 150);
-		int strokeColor = tm.attr("colorPrimary");
+		int fillColor = setAlpha(tm.color("colorPrimary"), 150);
+		int strokeColor = tm.color("colorPrimary");
 		nodeBox.setColor(5, strokeColor, fillColor);
 		nodeBox.showInfo();
 
@@ -221,7 +221,7 @@ StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
 	addHistory(This nodeBox) {
 		if (nodeBox == null) return;
 		if (!boxHistory.isEmpty()) {
-			if (boxHistory.getLast() == nodeBox) return;
+			if (boxHistory.get(0).equals(nodeBox)) return;
 		}
 		boxHistory.add(0, nodeBox);
 	}

@@ -84,11 +84,11 @@ InfoToast(AccessibilityNodeInfo node, Context overlayContext, int overlayType) {
 	final This tm = ThemeManager(overlayContext);
 	tm.setThemeDark();
 
-	final int primaryColor = tm.attr("colorPrimary");
-	final int onSurfaceColor = tm.attr("colorOnSurface");
-	final int secondaryColor = tm.attr("colorSecondary");
-	final int surfaceColor = tm.attr("colorSurfaceContainerHigh");
-	final int outlineColor = tm.attr("colorOutline");
+	final int primaryColor = tm.color("colorPrimary");
+	final int onSurfaceColor = tm.color("colorOnSurface");
+	final int secondaryColor = tm.color("colorSecondary");
+	final int surfaceColor = tm.color("colorSurfaceContainerHigh");
+	final int outlineColor = tm.color("colorOutline");
 
 	/* Node data */
 	final Rect bounds = new Rect();

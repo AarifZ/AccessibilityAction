@@ -146,7 +146,7 @@ public This InfoDialog(AccessibilityNodeInfo targetNode, Context ctx, int overla
 	root.setOrientation(LinearLayout.VERTICAL);
 	root.setPadding(dp(8), dp(8), dp(8), dp(8));
 	GradientDrawable bg = new GradientDrawable();
-	bg.setColor((int) tm.attr("colorSurface"));
+	bg.setColor((int) tm.color("colorSurface"));
 	bg.setCornerRadius(48f);
 	root.setBackground(bg);
 
@@ -158,7 +158,7 @@ public This InfoDialog(AccessibilityNodeInfo targetNode, Context ctx, int overla
 
 	View handle = new View(ctx);
 	GradientDrawable handleBg = new GradientDrawable();
-	handleBg.setColor((int) tm.attr("colorPrimary"));
+	handleBg.setColor((int) tm.color("colorPrimary"));
 	handleBg.setCornerRadius(48f);
 	handle.setBackground(handleBg);
 	header.addView(handle, new LinearLayout.LayoutParams(dp(64), dp(8)));

@@ -60,11 +60,11 @@ public This AssistButton(int initialX, int initialY) {
 	}
 
 	setButtonColorState(MaterialButton btn, boolean isActive) {
-		int backgroundColor = tm.attr("colorPrimary");
-		int iconColor = tm.attr("colorOnPrimary");
+		int backgroundColor = tm.color("colorPrimary");
+		int iconColor = tm.color("colorOnPrimary");
 		if (!isActive) {
 			backgroundColor = Color.TRANSPARENT;
-			iconColor = tm.attr("colorOnSurface");
+			iconColor = tm.color("colorOnSurface");
 		}
 		btn.setSupportBackgroundTintList(android.content.res.ColorStateList.valueOf(backgroundColor));
 		btn.setIconTint(android.content.res.ColorStateList.valueOf(iconColor));
@@ -89,7 +89,7 @@ public This AssistButton(int initialX, int initialY) {
 	GradientDrawable bg = new GradientDrawable();
 	bg.setShape(GradientDrawable.RECTANGLE);
 	bg.setCornerRadius(dp(28));
-	bg.setColor(tm.attr("colorSurfaceContainerHighest"));
+	bg.setColor(tm.color("colorSurfaceContainerHighest"));
 	int padding = dp(4);
 	container.setBackground(bg);
 	container.setPadding(padding, padding, padding, padding);

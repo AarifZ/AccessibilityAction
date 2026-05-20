@@ -56,7 +56,7 @@ public void textDialog(String text) {
 			/* Styling the background of the main layout */
 			GradientDrawable shape = new GradientDrawable();
 			shape.setCornerRadius(padding);
-			shape.setColor((int) tm.attr("colorSurface"));
+			shape.setColor((int) tm.color("colorSurface"));
 			main.setBackground(shape);
 
 			/* Positioning the main layout at the bottom */

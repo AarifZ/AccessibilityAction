@@ -145,7 +145,7 @@ ScriptEditor() {
 		/* Apply requested shape to baseRoot */
 		GradientDrawable shape = new GradientDrawable();
 		shape.setCornerRadius(28 * density);
-		shape.setColor((int) tm.attr("colorSurface"));
+		shape.setColor((int) tm.color("colorSurface"));
 		baseRoot.setBackground(shape);
 		baseRoot.setClipToOutline(true);
 
