@@ -40,7 +40,6 @@ a11Y() {
 	boolean includeAllMethods = false;
 	boolean quickAddMode = true;
 	boolean updatePreRelease = false;
-	boolean useColorFallback = false;
 	long lastActionPickerReminder = 0;
 	long actionPickerReminderDelay = 120000;
 	This TOP;
@@ -95,7 +94,6 @@ a11Y() {
 		THIS.namespace.setVariable("useA11yStructure", useA11yStructure, false);
 		THIS.namespace.setVariable("includeAllMethods", includeAllMethods, false);
 		THIS.namespace.setVariable("quickAddMode", quickAddMode, false);
-		THIS.namespace.setVariable("useColorFallback", useColorFallback, false);
 		THIS.namespace.setVariable("stepDelay", stepDelay, false);
 		THIS.namespace.setVariable("waitNodesTimeout", waitNodesTimeout, false);
 		if (ENV == null) {
@@ -185,15 +183,11 @@ a11Y() {
 	}
 
 	showAssist() {
-		if (assistButton != null && assistButton != void) {
-			if (!assistButton.isShown) assistButton.show();
-		}
+		if (!assistButton.isShown) assistButton.show();
 	}
 
 	removeAssist() {
-		if (assistButton != null && assistButton != void) {
-			if (assistButton.isShown) assistButton.remove();
-		}
+		if (assistButton.isShown) assistButton.remove();
 	}
 
 	update() {
@@ -219,12 +213,12 @@ a11Y() {
 
 	muteEvents() {
 		This a11E = tasker.getJavaVariable("a11E");
-		if (a11E != null) a11E.mute();
+		a11E.mute();
 	}
 
 	unmuteEvents() {
 		This a11E = tasker.getJavaVariable("a11E");
-		if (a11E != null) a11E.unmute();
+		a11E.unmute();
 	}
 
 	long startTime = System.currentTimeMillis();
@@ -253,24 +247,5 @@ a11Y.namespace.setVariable("updateManager", updateManager, false);
 
 This packageManager = PackageManager();
 a11Y.namespace.setVariable("packageManager", packageManager, false);
-
-/* ThemeManager with Material fallback for assist features */
-boolean useColorFallback = false;
-try {
-	This tm = ThemeManager(context);
-	tm.setThemeLight();
-	int color = tm.color("colorPrimary", false);
-	This mcf = MaterialColorFallback();
-	a11Y.namespace.setVariable("materialColorFallback", mcf, false);
-	if (color == 0) {
-		useColorFallback = true;
-		a11Y.namespace.setVariable("useColorFallback", true, false);
-		tasker.showToast("Can't find material color via ThemeManager. Using fallback colors.\n\nAccessibility actions still work.", "Theme Fallback");
-	}
-} catch (Exception e) {
-	useColorFallback = true;
-	a11Y.namespace.setVariable("useColorFallback", true, false);
-	tasker.log("ThemeManager unavailable in this environment: " + e.getMessage());
-}
 
 tasker.sendCommand("a11Y=:=start");

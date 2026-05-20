@@ -31,400 +31,429 @@ import bsh.This;
   when Material Design library is stripped (e.g. Tasker App Factory export)
   ───────────────────────────────────────────────────────────────*/
 public int dp(int val) {
-	return (int)(val * context.getResources().getDisplayMetrics().density);
+        return (int)(val * context.getResources().getDisplayMetrics().density);
 }
 
 public void addSpacer(Context ctx, ViewGroup container) {
-	int spacerHeight = dp(8);
-	View spacer = new View(ctx);
-	LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, spacerHeight);
-	spacer.setLayoutParams(params);
-	container.addView(spacer);
+        int spacerHeight = dp(8);
+        View spacer = new View(ctx);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, spacerHeight);
+        spacer.setLayoutParams(params);
+        container.addView(spacer);
 }
 
 ScriptEditor() {
-	Activity activity;
-	EditText editText;
-	boolean isRemoved;
-	boolean hasShown;
-	boolean isActionEdit;
-	String codeText;
+        Activity activity;
+        EditText editText;
+        boolean isRemoved;
+        boolean hasShown;
+        boolean isActionEdit;
+        String codeText;
 
-	/* Check Material Design availability */
-	boolean useMaterial = false;
-	try {
-		Class.forName("com.google.android.material.floatingtoolbar.FloatingToolbarLayout");
-		useMaterial = true;
-	} catch (Exception e) {
-		useMaterial = false;
-	}
+        /* Check Material Design availability */
+        boolean useMaterial = false;
+        try {
+                Class.forName("com.google.android.material.floatingtoolbar.FloatingToolbarLayout");
+                useMaterial = true;
+        } catch (Exception e) {
+                useMaterial = false;
+        }
 
-	isActionEdit() {
-		return getUsageEvents() { "className" }.equals("net.dinglisch.android.taskerm.ActionEdit");
-	}
+        isActionEdit() {
+                return getUsageEvents() { "className" }.equals("net.dinglisch.android.taskerm.ActionEdit");
+        }
 
-	isGenericAction() {
-		return getUsageEvents() { "className" }.equals("com.joaomgcd.taskerm.genericaction.ActivityGenericAction");
-	}
+        isGenericAction() {
+                return getUsageEvents() { "className" }.equals("com.joaomgcd.taskerm.genericaction.ActivityGenericAction");
+        }
 
-	paste(String script, boolean append) {
-		if (isGenericAction()) {
-			remove();
-			wait(1000);
-		}
-		if (isActionEdit()) {
-			String header = "a11Y.set();\n";
-			String actionId = "android:id/action_bar";
-			nodes = findNodes("id", actionId);
-			isJava = findNodes(toNode(nodes), "text", "Java Code");
-			if (hasNode(isJava)) {
-				setText("id", "net.dinglisch.android.taskerm:id/edittext", header + script, 0);
-				return;
-			}
-		}
-		tasker.showToast("Not in Java code action" + getUsageEvents() { "className" });
-	}
+        paste(String script, boolean append) {
+                if (isGenericAction()) {
+                        remove();
+                        wait(1000);
+                }
+                if (isActionEdit()) {
+                        String header = "a11Y.set();\n";
+                        String actionId = "android:id/action_bar";
+                        nodes = findNodes("id", actionId);
+                        isJava = findNodes(toNode(nodes), "text", "Java Code");
+                        if (hasNode(isJava)) {
+                                setText("id", "net.dinglisch.android.taskerm:id/edittext", header + script, 0);
+                                return;
+                        }
+                }
+                tasker.showToast("Not in Java code action" + getUsageEvents() { "className" });
+        }
 
-	copy() {
-		if (codeText != null) {
-			editText.setText(codeText);
-			return;
-		}
-		tasker.showToast("Not in Java code action" + getUsageEvents() { "className" });
-	}
+        copy() {
+                if (codeText != null) {
+                        editText.setText(codeText);
+                        return;
+                }
+                tasker.showToast("Not in Java code action" + getUsageEvents() { "className" });
+        }
 
-	remove() {
-		if (activity != null) {
-			activity.finish();
-			activity = null;
-		}
-		isRemoved = true;
-	}
+        remove() {
+                if (activity != null) {
+                        activity.finish();
+                        activity = null;
+                }
+                isRemoved = true;
+        }
 
-	getLines() {
-		String fullText = editText.getText().toString();
-		int start = editText.getSelectionStart();
-		int end = editText.getSelectionEnd();
-		int lineStart = fullText.lastIndexOf('\n', start - 1) + 1;
-		int lineEnd = fullText.indexOf('\n', end);
-		if (lineEnd == -1) lineEnd = fullText.length();
-		return fullText.substring(lineStart, lineEnd);
-	}
+        getLines() {
+                String fullText = editText.getText().toString();
+                int start = editText.getSelectionStart();
+                int end = editText.getSelectionEnd();
+                int lineStart = fullText.lastIndexOf('\n', start - 1) + 1;
+                int lineEnd = fullText.indexOf('\n', end);
+                if (lineEnd == -1) lineEnd = fullText.length();
+                return fullText.substring(lineStart, lineEnd);
+        }
 
-	layout(Activity act) {
-		activity = act;
-		float density = activity.getResources().getDisplayMetrics().density;
+        layout(Activity act) {
+                activity = act;
+                float density = activity.getResources().getDisplayMetrics().density;
 
-		window = activity.getWindow();
-		window.requestFeature(Window.FEATURE_NO_TITLE);
-		window.setBackgroundDrawableResource(android.R.color.transparent);
+                window = activity.getWindow();
+                window.requestFeature(Window.FEATURE_NO_TITLE);
+                window.setBackgroundDrawableResource(android.R.color.transparent);
 
-		WindowManager.LayoutParams lp = window.getAttributes();
-		lp.gravity = Gravity.BOTTOM;
-		lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-		window.setAttributes(lp);
+                WindowManager.LayoutParams lp = window.getAttributes();
+                lp.gravity = Gravity.BOTTOM;
+                lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+                window.setAttributes(lp);
 
-		This tm = ThemeManager(activity);
-		tm.setThemeDark();
+                This tm = ThemeManager(activity);
+                tm.setThemeDark();
 
-		baseRoot = new FrameLayout(activity);
+                baseRoot = new FrameLayout(activity);
 
-		/* Apply requested shape to baseRoot */
-		GradientDrawable shape = new GradientDrawable();
-		shape.setCornerRadius(28 * density);
-		int bgColor = (int) tm.attr("colorSurface");
-		shape.setColor(bgColor);
-		baseRoot.setBackground(shape);
-		baseRoot.setClipToOutline(true);
+                /* Apply requested shape to baseRoot */
+                GradientDrawable shape = new GradientDrawable();
+                shape.setCornerRadius(28 * density);
+                int bgColor = (int) tm.attr("colorSurface");
+                shape.setColor(bgColor);
+                baseRoot.setBackground(shape);
+                baseRoot.setClipToOutline(true);
 
-		/* Root container - try FloatingToolbarLayout, fallback to LinearLayout */
-		View root;
-		try {
-			root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activity);
-			root.setBackgroundColor(Color.TRANSPARENT);
-		} catch (Exception e) {
-			root = new LinearLayout(activity);
-			root.setBackgroundColor(Color.TRANSPARENT);
-		}
+                /* Root container - use FloatingToolbarLayout if Material available, else LinearLayout */
+                View root;
+                if (useMaterial) {
+                        try {
+                                root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activity);
+                                root.setBackgroundColor(Color.TRANSPARENT);
+                        } catch (Exception e) {
+                                root = new LinearLayout(activity);
+                                root.setBackgroundColor(Color.TRANSPARENT);
+                        }
+                } else {
+                        root = new LinearLayout(activity);
+                        root.setBackgroundColor(Color.TRANSPARENT);
+                }
 
-		final LinearLayout main = new LinearLayout(activity);
-		main.setOrientation(LinearLayout.VERTICAL);
+                final LinearLayout main = new LinearLayout(activity);
+                main.setOrientation(LinearLayout.VERTICAL);
 
-		FrameLayout.LayoutParams mainParams = new FrameLayout.LayoutParams(-1, -2);
-		mainParams.gravity = Gravity.BOTTOM;
-		main.setLayoutParams(mainParams);
+                FrameLayout.LayoutParams mainParams = new FrameLayout.LayoutParams(-1, -2);
+                mainParams.gravity = Gravity.BOTTOM;
+                main.setLayoutParams(mainParams);
 
-		/* Toolbar - try MaterialToolbar, fallback to TextView */
-		try {
-			toolbar = new com.google.android.material.appbar.MaterialToolbar(activity);
-			toolbar.setTitle("Script Editor");
-			toolbar.setTitleCentered(true);
-			main.addView(toolbar);
-		} catch (Exception e) {
-			TextView toolbarText = new TextView(activity);
-			toolbarText.setText("Script Editor");
-			toolbarText.setTextSize(18);
-			toolbarText.setTypeface(null, Typeface.BOLD);
-			toolbarText.setTextColor(Color.WHITE);
-			toolbarText.setGravity(Gravity.CENTER);
-			toolbarText.setPadding(dp(16), dp(16), dp(16), dp(16));
-			main.addView(toolbarText);
-		}
+                /* Toolbar - use MaterialToolbar if Material available, else TextView */
+                if (useMaterial) {
+                        try {
+                                toolbar = new com.google.android.material.appbar.MaterialToolbar(activity);
+                                toolbar.setTitle("Script Editor");
+                                toolbar.setTitleCentered(true);
+                                main.addView(toolbar);
+                        } catch (Exception e) {
+                                TextView toolbarText = new TextView(activity);
+                                toolbarText.setText("Script Editor");
+                                toolbarText.setTextSize(18);
+                                toolbarText.setTypeface(null, Typeface.BOLD);
+                                toolbarText.setTextColor(Color.WHITE);
+                                toolbarText.setGravity(Gravity.CENTER);
+                                toolbarText.setPadding(dp(16), dp(16), dp(16), dp(16));
+                                main.addView(toolbarText);
+                        }
+                } else {
+                        TextView toolbarText = new TextView(activity);
+                        toolbarText.setText("Script Editor");
+                        toolbarText.setTextSize(18);
+                        toolbarText.setTypeface(null, Typeface.BOLD);
+                        toolbarText.setTextColor(Color.WHITE);
+                        toolbarText.setGravity(Gravity.CENTER);
+                        toolbarText.setPadding(dp(16), dp(16), dp(16), dp(16));
+                        main.addView(toolbarText);
+                }
 
-		ScrollView scroller = new ScrollView(activity);
-		scroller.setVerticalScrollBarEnabled(false);
+                ScrollView scroller = new ScrollView(activity);
+                scroller.setVerticalScrollBarEnabled(false);
 
-		LinearLayout content = new LinearLayout(activity);
-		content.setOrientation(LinearLayout.VERTICAL);
-		int p = (int)(20 * density);
-		scroller.addView(content);
+                LinearLayout content = new LinearLayout(activity);
+                content.setOrientation(LinearLayout.VERTICAL);
+                int p = (int)(20 * density);
+                scroller.addView(content);
 
-		main.addView(scroller, new LinearLayout.LayoutParams(-1, 0, 1.0f));
+                main.addView(scroller, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
-		/* EditText - try TextInputLayout wrapper, fallback to plain EditText */
-		This a11Y = tasker.getJavaVariable("a11Y");
-		String initialText = "";
-		String startText = (a11Y.scriptEditor != void && a11Y.scriptEditor != null) ? a11Y.scriptEditor : initialText;
+                /* EditText - try TextInputLayout wrapper, fallback to plain EditText */
+                This a11Y = tasker.getJavaVariable("a11Y");
+                String initialText = "";
+                String startText = (a11Y.scriptEditor != void && a11Y.scriptEditor != null) ? a11Y.scriptEditor : initialText;
 
-		if (useMaterial) {
-			try {
-				com.google.android.material.textfield.TextInputLayout inputLayout = new com.google.android.material.textfield.TextInputLayout(activity);
-				editText = new com.google.android.material.textfield.TextInputEditText(inputLayout.getContext());
-				editText.setText(startText);
-				editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-				editText.setMaxLines(15);
-				editText.addTextChangedListener(new TextWatcher() {
-					beforeTextChanged(CharSequence s, int start, int count, int after) {}
-					onTextChanged(CharSequence s, int start, int before, int count) {
-						This a11Y = tasker.getJavaVariable("a11Y");
-						a11Y.namespace.setVariable("scriptEditor", s.toString(), false);
-					}
-					afterTextChanged(Editable s) {}
-				});
-				inputLayout.addView(editText);
-				content.addView(inputLayout);
-			} catch (Exception e) {
-				editText = new EditText(activity);
-				editText.setText(startText);
-				editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-				editText.setMaxLines(15);
-				editText.setBackgroundColor(Color.parseColor("#1e1e1e"));
-				editText.setTextColor(Color.WHITE);
-				editText.setHintTextColor(Color.parseColor("#888888"));
-				editText.addTextChangedListener(new TextWatcher() {
-					beforeTextChanged(CharSequence s, int start, int count, int after) {}
-					onTextChanged(CharSequence s, int start, int before, int count) {
-						This a11Y = tasker.getJavaVariable("a11Y");
-						a11Y.namespace.setVariable("scriptEditor", s.toString(), false);
-					}
-					afterTextChanged(Editable s) {}
-				});
-				content.addView(editText, new LinearLayout.LayoutParams(-1, -2));
-			}
-		} else {
-			editText = new EditText(activity);
-			editText.setText(startText);
-			editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-			editText.setMaxLines(15);
-			editText.setBackgroundColor(Color.parseColor("#1e1e1e"));
-			editText.setTextColor(Color.WHITE);
-			editText.setHintTextColor(Color.parseColor("#888888"));
-			editText.addTextChangedListener(new TextWatcher() {
-				beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				onTextChanged(CharSequence s, int start, int before, int count) {
-					This a11Y = tasker.getJavaVariable("a11Y");
-					a11Y.namespace.setVariable("scriptEditor", s.toString(), false);
-				}
-				afterTextChanged(Editable s) {}
-			});
-			content.addView(editText, new LinearLayout.LayoutParams(-1, -2));
-		}
-		addSpacer(activity, content);
+                if (useMaterial) {
+                        try {
+                                com.google.android.material.textfield.TextInputLayout inputLayout = new com.google.android.material.textfield.TextInputLayout(activity);
+                                editText = new com.google.android.material.textfield.TextInputEditText(inputLayout.getContext());
+                                editText.setText(startText);
+                                editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                                editText.setMaxLines(15);
+                                editText.addTextChangedListener(new TextWatcher() {
+                                        beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                                        onTextChanged(CharSequence s, int start, int before, int count) {
+                                                This a11Y = tasker.getJavaVariable("a11Y");
+                                                a11Y.namespace.setVariable("scriptEditor", s.toString(), false);
+                                        }
+                                        afterTextChanged(Editable s) {}
+                                });
+                                inputLayout.addView(editText);
+                                content.addView(inputLayout);
+                        } catch (Exception e) {
+                                editText = new EditText(activity);
+                                editText.setText(startText);
+                                editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                                editText.setMaxLines(15);
+                                editText.setBackgroundColor(Color.parseColor("#1e1e1e"));
+                                editText.setTextColor(Color.WHITE);
+                                editText.setHintTextColor(Color.parseColor("#888888"));
+                                editText.addTextChangedListener(new TextWatcher() {
+                                        beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                                        onTextChanged(CharSequence s, int start, int before, int count) {
+                                                This a11Y = tasker.getJavaVariable("a11Y");
+                                                a11Y.namespace.setVariable("scriptEditor", s.toString(), false);
+                                        }
+                                        afterTextChanged(Editable s) {}
+                                });
+                                content.addView(editText, new LinearLayout.LayoutParams(-1, -2));
+                        }
+                } else {
+                        editText = new EditText(activity);
+                        editText.setText(startText);
+                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                        editText.setMaxLines(15);
+                        editText.setBackgroundColor(Color.parseColor("#1e1e1e"));
+                        editText.setTextColor(Color.WHITE);
+                        editText.setHintTextColor(Color.parseColor("#888888"));
+                        editText.addTextChangedListener(new TextWatcher() {
+                                beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                                onTextChanged(CharSequence s, int start, int before, int count) {
+                                        This a11Y = tasker.getJavaVariable("a11Y");
+                                        a11Y.namespace.setVariable("scriptEditor", s.toString(), false);
+                                }
+                                afterTextChanged(Editable s) {}
+                        });
+                        content.addView(editText, new LinearLayout.LayoutParams(-1, -2));
+                }
+                addSpacer(activity, content);
 
-		/* Chip group / Button group - try Chip/ChipGroup, fallback to Buttons */
-		if (useMaterial) {
-			try {
-				com.google.android.material.chip.ChipGroup chipGroup = new com.google.android.material.chip.ChipGroup(activity);
+                /* Chip group / Button group - try Chip/ChipGroup, fallback to Buttons */
+                if (useMaterial) {
+                        try {
+                                com.google.android.material.chip.ChipGroup chipGroup = new com.google.android.material.chip.ChipGroup(activity);
 
-				com.google.android.material.chip.Chip lineChip = new com.google.android.material.chip.Chip(activity);
-				lineChip.setText("Run Line");
-				lineChip.setOnClickListener(new View.OnClickListener() {
-					onClick(View v) {
-						String code = getLines();
-						remove();
-						runScript(code, 100);
-					}
-				});
-				chipGroup.addView(lineChip);
+                                com.google.android.material.chip.Chip lineChip = new com.google.android.material.chip.Chip(activity);
+                                lineChip.setText("Run Line");
+                                lineChip.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                String code = getLines();
+                                                remove();
+                                                runScript(code, 100);
+                                        }
+                                });
+                                chipGroup.addView(lineChip);
 
-				if (isActionEdit) {
-					com.google.android.material.chip.Chip setChip = new com.google.android.material.chip.Chip(activity);
-					setChip.setText("Set to code");
-					setChip.setOnClickListener(new View.OnClickListener() {
-						onClick(View v) {
-							paste(editText.getText().toString(), true);
-						}
-					});
-					chipGroup.addView(setChip);
+                                if (isActionEdit) {
+                                        com.google.android.material.chip.Chip setChip = new com.google.android.material.chip.Chip(activity);
+                                        setChip.setText("Set to code");
+                                        setChip.setOnClickListener(new View.OnClickListener() {
+                                                onClick(View v) {
+                                                        paste(editText.getText().toString(), true);
+                                                }
+                                        });
+                                        chipGroup.addView(setChip);
 
-					com.google.android.material.chip.Chip copyChip = new com.google.android.material.chip.Chip(activity);
-					copyChip.setText("Copy");
-					copyChip.setOnClickListener(new View.OnClickListener() {
-						onClick(View v) {
-							copy();
-						}
-					});
-					chipGroup.addView(copyChip);
-				}
+                                        com.google.android.material.chip.Chip copyChip = new com.google.android.material.chip.Chip(activity);
+                                        copyChip.setText("Copy");
+                                        copyChip.setOnClickListener(new View.OnClickListener() {
+                                                onClick(View v) {
+                                                        copy();
+                                                }
+                                        });
+                                        chipGroup.addView(copyChip);
+                                }
 
-				com.google.android.material.chip.Chip clearChip = new com.google.android.material.chip.Chip(activity);
-				clearChip.setText("Clear");
-				clearChip.setOnClickListener(new View.OnClickListener() {
-					onClick(View v) {
-						editText.setText("");
-					}
-				});
-				chipGroup.addView(clearChip);
+                                com.google.android.material.chip.Chip clearChip = new com.google.android.material.chip.Chip(activity);
+                                clearChip.setText("Clear");
+                                clearChip.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                editText.setText("");
+                                        }
+                                });
+                                chipGroup.addView(clearChip);
 
-				content.addView(chipGroup);
-			} catch (Exception e) {
-				/* Fall through to button fallback below */
-				addButtonGroup(content);
-			}
-		} else {
-			addButtonGroup(content);
-		}
-		addSpacer(activity, content);
+                                content.addView(chipGroup);
+                        } catch (Exception e) {
+                                /* Fall through to button fallback below */
+                                addButtonGroup(content);
+                        }
+                } else {
+                        addButtonGroup(content);
+                }
+                addSpacer(activity, content);
 
-		/* RUN ALL button - try MaterialButton, fallback to Button */
-		try {
-			com.google.android.material.button.MaterialButton runAllBtn = new com.google.android.material.button.MaterialButton(activity);
-			runAllBtn.setText("RUN ALL");
-			runAllBtn.setOnClickListener(new View.OnClickListener() {
-				onClick(View v) {
-					String script = editText.getText().toString();
-					remove();
-					runScript(script, 100);
-				}
-			});
-			content.addView(runAllBtn);
-		} catch (Exception e) {
-			Button runAllBtn = new Button(activity);
-			runAllBtn.setText("RUN ALL");
-			runAllBtn.setOnClickListener(new View.OnClickListener() {
-				onClick(View v) {
-					String script = editText.getText().toString();
-					remove();
-					runScript(script, 100);
-				}
-			});
-			content.addView(runAllBtn);
-		}
+                /* RUN ALL button - use MaterialButton if Material available, else Button */
+                if (useMaterial) {
+                        try {
+                                com.google.android.material.button.MaterialButton runAllBtn = new com.google.android.material.button.MaterialButton(activity);
+                                runAllBtn.setText("RUN ALL");
+                                runAllBtn.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                String script = editText.getText().toString();
+                                                remove();
+                                                runScript(script, 100);
+                                        }
+                                });
+                                content.addView(runAllBtn);
+                        } catch (Exception e) {
+                                Button runAllBtn = new Button(activity);
+                                runAllBtn.setText("RUN ALL");
+                                runAllBtn.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                String script = editText.getText().toString();
+                                                remove();
+                                                runScript(script, 100);
+                                        }
+                                });
+                                content.addView(runAllBtn);
+                        }
+                } else {
+                        Button runAllBtn = new Button(activity);
+                        runAllBtn.setText("RUN ALL");
+                        runAllBtn.setOnClickListener(new View.OnClickListener() {
+                                onClick(View v) {
+                                        String script = editText.getText().toString();
+                                        remove();
+                                        runScript(script, 100);
+                                }
+                        });
+                        content.addView(runAllBtn);
+                }
 
-		((ViewGroup) root).addView(main);
-		baseRoot.addView(root);
-		activity.setContentView(baseRoot);
+                ((ViewGroup) root).addView(main);
+                baseRoot.addView(root);
+                activity.setContentView(baseRoot);
 
-		activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-			onViewAttachedToWindow(View v) {
-				isRemoved = false;
-				hasShown = true;
-			}
-			onViewDetachedFromWindow(View v) {
-				isRemoved = true;
-				hasShown = false;
-				activity = null;
-			}
-		});
-	}
+                activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                        onViewAttachedToWindow(View v) {
+                                isRemoved = false;
+                                hasShown = true;
+                        }
+                        onViewDetachedFromWindow(View v) {
+                                isRemoved = true;
+                                hasShown = false;
+                                activity = null;
+                        }
+                });
+        }
 
-	/* Fallback button group when Material Chips are unavailable */
-	addButtonGroup(LinearLayout content) {
-		LinearLayout buttonGroup = new LinearLayout(activity);
-		buttonGroup.setOrientation(LinearLayout.HORIZONTAL);
-		buttonGroup.setGravity(Gravity.CENTER);
-		int btnMargin = dp(4);
+        /* Fallback button group when Material Chips are unavailable */
+        addButtonGroup(LinearLayout content) {
+                LinearLayout buttonGroup = new LinearLayout(activity);
+                buttonGroup.setOrientation(LinearLayout.HORIZONTAL);
+                buttonGroup.setGravity(Gravity.CENTER);
+                int btnMargin = dp(4);
 
-		createButton(String text, final Runnable action) {
-			Button btn = new Button(activity);
-			btn.setText(text);
-			btn.setOnClickListener(new View.OnClickListener() {
-				onClick(View v) {
-					action.run();
-				}
-			});
-			LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1.0f);
-			params.setMargins(btnMargin, 0, btnMargin, 0);
-			btn.setLayoutParams(params);
-			buttonGroup.addView(btn);
-		}
+                createButton(String text, final Runnable action) {
+                        Button btn = new Button(activity);
+                        btn.setText(text);
+                        btn.setOnClickListener(new View.OnClickListener() {
+                                onClick(View v) {
+                                        action.run();
+                                }
+                        });
+                        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1.0f);
+                        params.setMargins(btnMargin, 0, btnMargin, 0);
+                        btn.setLayoutParams(params);
+                        buttonGroup.addView(btn);
+                }
 
-		createButton("Run Line", new Runnable() {
-			run() {
-				String code = getLines();
-				remove();
-				runScript(code, 100);
-			}
-		});
+                createButton("Run Line", new Runnable() {
+                        run() {
+                                String code = getLines();
+                                remove();
+                                runScript(code, 100);
+                        }
+                });
 
-		if (isActionEdit) {
-			createButton("Set Code", new Runnable() {
-				run() {
-					paste(editText.getText().toString(), true);
-				}
-			});
+                if (isActionEdit) {
+                        createButton("Set Code", new Runnable() {
+                                run() {
+                                        paste(editText.getText().toString(), true);
+                                }
+                        });
 
-			createButton("Copy", new Runnable() {
-				run() {
-					copy();
-				}
-			});
-		}
+                        createButton("Copy", new Runnable() {
+                                run() {
+                                        copy();
+                                }
+                        });
+                }
 
-		createButton("Clear", new Runnable() {
-			run() {
-				editText.setText("");
-			}
-		});
+                createButton("Clear", new Runnable() {
+                        run() {
+                                editText.setText("");
+                        }
+                });
 
-		content.addView(buttonGroup);
-	}
+                content.addView(buttonGroup);
+        }
 
-	Consumer uiLogic = new Consumer() {
-		accept(Object activityObj) {
-			layout((Activity) activityObj);
-		}
-	};
+        Consumer uiLogic = new Consumer() {
+                accept(Object activityObj) {
+                        layout((Activity) activityObj);
+                }
+        };
 
-	show() {
-		codeText = null;
-		isActionEdit = isActionEdit();
-		boolean oldDebugMe = debugMe;
-		debugMe = false;
-		List actionNodes = findNodes("id", "android:id/action_bar");
-		if (hasNode(actionNodes)) {
-			List isJava;
-			isJava = findNodes(toNode(actionNodes), "text", "Java Code");
-			if (hasNode(isJava)) {
-				List edits = findNodes("id", "net.dinglisch.android.taskerm:id/edittext");
-				codeText = getText(edits);
-			}
-		}
-		debugMe = oldDebugMe;
-		if (!hasShown) {
-			isRemoved = false;
-			hasShown = true;
-			tasker.doWithActivity(uiLogic);
-		}
-	}
+        show() {
+                codeText = null;
+                isActionEdit = isActionEdit();
+                boolean oldDebugMe = debugMe;
+                debugMe = false;
+                List actionNodes = findNodes("id", "android:id/action_bar");
+                if (hasNode(actionNodes)) {
+                        List isJava;
+                        isJava = findNodes(toNode(actionNodes), "text", "Java Code");
+                        if (hasNode(isJava)) {
+                                List edits = findNodes("id", "net.dinglisch.android.taskerm:id/edittext");
+                                codeText = getText(edits);
+                        }
+                }
+                debugMe = oldDebugMe;
+                if (!hasShown) {
+                        isRemoved = false;
+                        hasShown = true;
+                        tasker.doWithActivity(uiLogic);
+                }
+        }
 
-	toggle() {
-		if (!hasShown) {
-			show();
-		} else {
-			remove();
-		}
-	}
+        toggle() {
+                if (!hasShown) {
+                        show();
+                } else {
+                        remove();
+                }
+        }
 
-	return this;
+        return this;
 }

@@ -28,11 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.concurrent.Callable;
-try {
-        import com.joaomgcd.taskerm.action.java.ClassImplementation;
-} catch (Exception e) {
-        // ClassImplementation not available
-}
+import com.joaomgcd.taskerm.action.java.ClassImplementation;
 import java.util.function.Consumer;
 import bsh.This;
 import io.reactivex.subjects.CompletableSubject;
@@ -124,11 +120,16 @@ ListDialog(This config) {
                         tasker.log("ThemeManager unavailable for ListDialog");
                 }
 
-                /* Root container - try FloatingToolbarLayout, fallback to FrameLayout */
-                try {
-                        root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activityContext);
-                        root.setBackgroundColor(Color.TRANSPARENT);
-                } catch (Exception e) {
+                /* Root container - use FloatingToolbarLayout if Material available, else FrameLayout */
+                if (useMaterial) {
+                        try {
+                                root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activityContext);
+                                root.setBackgroundColor(Color.TRANSPARENT);
+                        } catch (Exception e) {
+                                root = new FrameLayout(activityContext);
+                                root.setBackgroundColor(Color.TRANSPARENT);
+                        }
+                } else {
                         root = new FrameLayout(activityContext);
                         root.setBackgroundColor(Color.TRANSPARENT);
                 }
@@ -148,14 +149,25 @@ ListDialog(This config) {
                 mainContainer.setBackground(shape);
                 mainContainer.setClipToOutline(true);
 
-                /* Title - try MaterialToolbar, fallback to TextView */
+                /* Title - use MaterialToolbar if Material available, else TextView */
                 if (title != null) {
-                        try {
-                                com.google.android.material.appbar.MaterialToolbar toolbar = new com.google.android.material.appbar.MaterialToolbar(activityContext);
-                                toolbar.setTitle(title);
-                                toolbar.setTitleCentered(true);
-                                mainContainer.addView(toolbar);
-                        } catch (Exception e) {
+                        if (useMaterial) {
+                                try {
+                                        com.google.android.material.appbar.MaterialToolbar toolbar = new com.google.android.material.appbar.MaterialToolbar(activityContext);
+                                        toolbar.setTitle(title);
+                                        toolbar.setTitleCentered(true);
+                                        mainContainer.addView(toolbar);
+                                } catch (Exception e) {
+                                        TextView titleView = new TextView(activityContext);
+                                        titleView.setText(title);
+                                        titleView.setTextSize(18);
+                                        titleView.setTypeface(null, Typeface.BOLD);
+                                        titleView.setTextColor(Color.WHITE);
+                                        titleView.setGravity(Gravity.CENTER);
+                                        titleView.setPadding(dp(16), dp(16), dp(16), dp(16));
+                                        mainContainer.addView(titleView);
+                                }
+                        } else {
                                 TextView titleView = new TextView(activityContext);
                                 titleView.setText(title);
                                 titleView.setTextSize(18);
@@ -319,18 +331,30 @@ ListDialog(This config) {
                 bc.setGravity(Gravity.END);
                 bc.setPadding(0, dp(8), 0, 0);
 
-                /* Cancel button - try MaterialButton, fallback to Button */
-                try {
-                        com.google.android.material.button.MaterialButton cBtn = new com.google.android.material.button.MaterialButton(activityContext);
-                        cBtn.setText("CANCEL");
-                        cBtn.setOnClickListener(new View.OnClickListener() {
-                                onClick(View v) {
-                                        if (hasCancel) config.onCancel();
-                                        remove();
-                                }
-                        });
-                        bc.addView(cBtn);
-                } catch (Exception e) {
+                /* Cancel button - use MaterialButton if Material available, else Button */
+                if (useMaterial) {
+                        try {
+                                com.google.android.material.button.MaterialButton cBtn = new com.google.android.material.button.MaterialButton(activityContext);
+                                cBtn.setText("CANCEL");
+                                cBtn.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                if (hasCancel) config.onCancel();
+                                                remove();
+                                        }
+                                });
+                                bc.addView(cBtn);
+                        } catch (Exception e) {
+                                Button cBtn = new Button(activityContext);
+                                cBtn.setText("CANCEL");
+                                cBtn.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                if (hasCancel) config.onCancel();
+                                                remove();
+                                        }
+                                });
+                                bc.addView(cBtn);
+                        }
+                } else {
                         Button cBtn = new Button(activityContext);
                         cBtn.setText("CANCEL");
                         cBtn.setOnClickListener(new View.OnClickListener() {
@@ -343,21 +367,36 @@ ListDialog(This config) {
                 }
 
                 if (isMulti) {
-                        /* OK button - try MaterialButton, fallback to Button */
-                        try {
-                                com.google.android.material.button.MaterialButton oBtn = new com.google.android.material.button.MaterialButton(activityContext);
-                                LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
-                                ol.leftMargin = dp(12);
-                                oBtn.setLayoutParams(ol);
-                                oBtn.setText("OK");
-                                oBtn.setOnClickListener(new View.OnClickListener() {
-                                        onClick(View v) {
-                                                if (hasSuccessMulti) config.onSuccess(selectedItems);
-                                                remove();
-                                        }
-                                });
-                                bc.addView(oBtn);
-                        } catch (Exception e) {
+                        /* OK button - use MaterialButton if Material available, else Button */
+                        if (useMaterial) {
+                                try {
+                                        com.google.android.material.button.MaterialButton oBtn = new com.google.android.material.button.MaterialButton(activityContext);
+                                        LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
+                                        ol.leftMargin = dp(12);
+                                        oBtn.setLayoutParams(ol);
+                                        oBtn.setText("OK");
+                                        oBtn.setOnClickListener(new View.OnClickListener() {
+                                                onClick(View v) {
+                                                        if (hasSuccessMulti) config.onSuccess(selectedItems);
+                                                        remove();
+                                                }
+                                        });
+                                        bc.addView(oBtn);
+                                } catch (Exception e) {
+                                        Button oBtn = new Button(activityContext);
+                                        LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
+                                        ol.leftMargin = dp(12);
+                                        oBtn.setLayoutParams(ol);
+                                        oBtn.setText("OK");
+                                        oBtn.setOnClickListener(new View.OnClickListener() {
+                                                onClick(View v) {
+                                                        if (hasSuccessMulti) config.onSuccess(selectedItems);
+                                                        remove();
+                                                }
+                                        });
+                                        bc.addView(oBtn);
+                                }
+                        } else {
                                 Button oBtn = new Button(activityContext);
                                 LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
                                 ol.leftMargin = dp(12);

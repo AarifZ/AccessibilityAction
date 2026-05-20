@@ -27,336 +27,363 @@ import bsh.This;
   when Material Design library is stripped (e.g. Tasker App Factory export)
   ───────────────────────────────────────────────────────────────*/
 public void addSpacer(Context ctx, ViewGroup container) {
-	int spacerHeight = dp(8);
-	View spacer = new View(ctx);
-	LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, spacerHeight);
-	spacer.setLayoutParams(params);
-	container.addView(spacer);
+        int spacerHeight = dp(8);
+        View spacer = new View(ctx);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, spacerHeight);
+        spacer.setLayoutParams(params);
+        container.addView(spacer);
 }
 
 AssistSetting() {
-	Activity activity;
-	boolean isRemoved = true;
-	boolean hasShown = false;
-	This a11Y = tasker.getJavaVariable("a11Y");
+        Activity activity;
+        boolean isRemoved = true;
+        boolean hasShown = false;
+        This a11Y = tasker.getJavaVariable("a11Y");
 
-	/* Check Material Design availability */
-	boolean useMaterial = false;
-	try {
-		Class.forName("com.google.android.material.materialswitch.MaterialSwitch");
-		useMaterial = true;
-	} catch (Exception e) {
-		useMaterial = false;
-	}
+        /* Check Material Design availability */
+        boolean useMaterial = false;
+        try {
+                Class.forName("com.google.android.material.materialswitch.MaterialSwitch");
+                useMaterial = true;
+        } catch (Exception e) {
+                useMaterial = false;
+        }
 
-	remove() {
-		if (activity != null) {
-			activity.finish();
-			activity = null;
-		}
-		isRemoved = true;
-	}
+        remove() {
+                if (activity != null) {
+                        activity.finish();
+                        activity = null;
+                }
+                isRemoved = true;
+        }
 
-	layout(Activity act) {
-		activity = act;
-		float density = activity.getResources().getDisplayMetrics().density;
+        layout(Activity act) {
+                activity = act;
+                float density = activity.getResources().getDisplayMetrics().density;
 
-		window = activity.getWindow();
-		window.requestFeature(Window.FEATURE_NO_TITLE);
-		window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
-		window.setBackgroundDrawableResource(android.R.color.transparent);
-		window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+                window = activity.getWindow();
+                window.requestFeature(Window.FEATURE_NO_TITLE);
+                window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+                window.setBackgroundDrawableResource(android.R.color.transparent);
+                window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
 
-		WindowManager.LayoutParams lp = window.getAttributes();
-		lp.gravity = Gravity.BOTTOM;
-		lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-		window.setAttributes(lp);
-		This tm = ThemeManager(activity);
-		tm.setThemeDark();
+                WindowManager.LayoutParams lp = window.getAttributes();
+                lp.gravity = Gravity.BOTTOM;
+                lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+                window.setAttributes(lp);
+                This tm = ThemeManager(activity);
+                tm.setThemeDark();
 
-		baseRoot = new FrameLayout(activity);
+                baseRoot = new FrameLayout(activity);
 
-		/* Applying requested shape to baseRoot */
-		GradientDrawable shape = new GradientDrawable();
-		shape.setCornerRadius(28 * density);
-		int bgColor = (int) tm.attr("colorSurface");
-		shape.setColor(bgColor);
-		baseRoot.setBackground(shape);
-		baseRoot.setClipToOutline(true);
+                /* Applying requested shape to baseRoot */
+                GradientDrawable shape = new GradientDrawable();
+                shape.setCornerRadius(28 * density);
+                int bgColor = (int) tm.attr("colorSurface");
+                shape.setColor(bgColor);
+                baseRoot.setBackground(shape);
+                baseRoot.setClipToOutline(true);
 
-		/* Root container - try FloatingToolbarLayout, fallback to LinearLayout */
-		View root;
-		try {
-			root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activity);
-			root.setBackgroundColor(Color.TRANSPARENT);
-		} catch (Exception e) {
-			root = new LinearLayout(activity);
-			root.setBackgroundColor(Color.TRANSPARENT);
-		}
+                /* Root container - use FloatingToolbarLayout if Material available, else LinearLayout */
+                View root;
+                if (useMaterial) {
+                        try {
+                                root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activity);
+                                root.setBackgroundColor(Color.TRANSPARENT);
+                        } catch (Exception e) {
+                                root = new LinearLayout(activity);
+                                root.setBackgroundColor(Color.TRANSPARENT);
+                        }
+                } else {
+                        root = new LinearLayout(activity);
+                        root.setBackgroundColor(Color.TRANSPARENT);
+                }
 
-		final LinearLayout main = new LinearLayout(activity);
-		main.setOrientation(LinearLayout.VERTICAL);
+                final LinearLayout main = new LinearLayout(activity);
+                main.setOrientation(LinearLayout.VERTICAL);
 
-		FrameLayout.LayoutParams mainParams = new FrameLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT,
-			ViewGroup.LayoutParams.WRAP_CONTENT
-		);
-		mainParams.gravity = Gravity.BOTTOM;
-		main.setLayoutParams(mainParams);
+                FrameLayout.LayoutParams mainParams = new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+                mainParams.gravity = Gravity.BOTTOM;
+                main.setLayoutParams(mainParams);
 
-		/* Toolbar - try MaterialToolbar, fallback to TextView */
-		try {
-			toolbar = new com.google.android.material.appbar.MaterialToolbar(activity);
-			toolbar.setTitle("Settings");
-			toolbar.setTitleCentered(true);
-			main.addView(toolbar);
-		} catch (Exception e) {
-			TextView toolbarText = new TextView(activity);
-			toolbarText.setText("Settings");
-			toolbarText.setTextSize(18);
-			toolbarText.setTypeface(null, android.graphics.Typeface.BOLD);
-			toolbarText.setTextColor(Color.WHITE);
-			toolbarText.setGravity(Gravity.CENTER);
-			toolbarText.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
-			main.addView(toolbarText);
-		}
+                /* Toolbar - use MaterialToolbar if Material available, else TextView */
+                if (useMaterial) {
+                        try {
+                                toolbar = new com.google.android.material.appbar.MaterialToolbar(activity);
+                                toolbar.setTitle("Settings");
+                                toolbar.setTitleCentered(true);
+                                main.addView(toolbar);
+                        } catch (Exception e) {
+                                TextView toolbarText = new TextView(activity);
+                                toolbarText.setText("Settings");
+                                toolbarText.setTextSize(18);
+                                toolbarText.setTypeface(null, android.graphics.Typeface.BOLD);
+                                toolbarText.setTextColor(Color.WHITE);
+                                toolbarText.setGravity(Gravity.CENTER);
+                                toolbarText.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
+                                main.addView(toolbarText);
+                        }
+                } else {
+                        TextView toolbarText = new TextView(activity);
+                        toolbarText.setText("Settings");
+                        toolbarText.setTextSize(18);
+                        toolbarText.setTypeface(null, android.graphics.Typeface.BOLD);
+                        toolbarText.setTextColor(Color.WHITE);
+                        toolbarText.setGravity(Gravity.CENTER);
+                        toolbarText.setPadding((int)(16*density), (int)(16*density), (int)(16*density), (int)(16*density));
+                        main.addView(toolbarText);
+                }
 
-		ScrollView scroller = new ScrollView(activity);
-		scroller.setVerticalScrollBarEnabled(false);
+                ScrollView scroller = new ScrollView(activity);
+                scroller.setVerticalScrollBarEnabled(false);
 
-		LinearLayout content = new LinearLayout(activity);
-		content.setOrientation(LinearLayout.VERTICAL);
-		int padding = (int)(16 * density);
-		content.setPadding(padding, padding, padding, padding);
-		scroller.addView(content);
-		main.addView(scroller, new LinearLayout.LayoutParams(-1, 0, 1.0f));
+                LinearLayout content = new LinearLayout(activity);
+                content.setOrientation(LinearLayout.VERTICAL);
+                int padding = (int)(16 * density);
+                content.setPadding(padding, padding, padding, padding);
+                scroller.addView(content);
+                main.addView(scroller, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
-		createSwitch(String text, String variableName) {
-			CompoundButton itemSwitch;
-			if (useMaterial) {
-				try {
-					itemSwitch = new com.google.android.material.materialswitch.MaterialSwitch(activity);
-				} catch (Exception e) {
-					itemSwitch = new Switch(activity);
-				}
-			} else {
-				itemSwitch = new Switch(activity);
-			}
-			((TextView) itemSwitch).setText(text);
-			boolean state = a11Y.namespace.getVariable(variableName);
-			itemSwitch.setChecked(state);
-			itemSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-				onCheckedChanged(CompoundButton b, boolean checked) {
-					try {
-						a11Y.namespace.setVariable(variableName, checked, false);
-					} catch (Exception e) {}
-				}
-			});
-			content.addView(itemSwitch);
-			addSpacer(activity, content);
-			return itemSwitch;
-		}
+                createSwitch(String text, String variableName) {
+                        CompoundButton itemSwitch;
+                        if (useMaterial) {
+                                try {
+                                        itemSwitch = new com.google.android.material.materialswitch.MaterialSwitch(activity);
+                                } catch (Exception e) {
+                                        itemSwitch = new Switch(activity);
+                                }
+                        } else {
+                                itemSwitch = new Switch(activity);
+                        }
+                        ((TextView) itemSwitch).setText(text);
+                        boolean state = a11Y.namespace.getVariable(variableName);
+                        itemSwitch.setChecked(state);
+                        itemSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                                onCheckedChanged(CompoundButton b, boolean checked) {
+                                        try {
+                                                a11Y.namespace.setVariable(variableName, checked, false);
+                                        } catch (Exception e) {}
+                                }
+                        });
+                        content.addView(itemSwitch);
+                        addSpacer(activity, content);
+                        return itemSwitch;
+                }
 
-		createInput(String hintText, String variableName, Object defaultValue) {
-			/* Try TextInputLayout, fallback to plain EditText */
-			View inputView;
-			EditText editText;
+                createInput(String hintText, String variableName, Object defaultValue) {
+                        /* Try TextInputLayout, fallback to plain EditText */
+                        View inputView;
+                        EditText editText;
 
-			if (useMaterial) {
-				try {
-					com.google.android.material.textfield.TextInputLayout textLayout = new com.google.android.material.textfield.TextInputLayout(activity);
-					textLayout.setHint(hintText);
-					textLayout.setBoxBackgroundMode(2);
-					editText = new com.google.android.material.textfield.TextInputEditText(textLayout.getContext());
-					Object value = a11Y.namespace.getVariable(variableName);
-					editText.setText(String.valueOf(value));
+                        if (useMaterial) {
+                                try {
+                                        com.google.android.material.textfield.TextInputLayout textLayout = new com.google.android.material.textfield.TextInputLayout(activity);
+                                        textLayout.setHint(hintText);
+                                        textLayout.setBoxBackgroundMode(2);
+                                        editText = new com.google.android.material.textfield.TextInputEditText(textLayout.getContext());
+                                        Object value = a11Y.namespace.getVariable(variableName);
+                                        editText.setText(String.valueOf(value));
 
-					String inputClass = value.getClass().getSimpleName();
-					switch (inputClass) {
-						case "Float":
-						case "Double":
-							editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-							break;
-						case "Integer":
-						case "Long":
-							editText.setInputType(InputType.TYPE_CLASS_NUMBER);
-							break;
-					}
+                                        String inputClass = value.getClass().getSimpleName();
+                                        switch (inputClass) {
+                                                case "Float":
+                                                case "Double":
+                                                        editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                                                        break;
+                                                case "Integer":
+                                                case "Long":
+                                                        editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+                                                        break;
+                                        }
 
-					editText.addTextChangedListener(new TextWatcher() {
-						beforeTextChanged(CharSequence charSequence, int start, int count, int after) {}
-						onTextChanged(CharSequence charSequence, int start, int before, int count) {
-							try {
-								if (charSequence.length() > 0) {
-									textLayout.setError(null);
-									String newValue = charSequence.toString();
-									switch (inputClass) {
-										case "Integer":
-											a11Y.namespace.setVariable(variableName, Integer.parseInt(newValue), false);
-											break;
-										case "Long":
-											a11Y.namespace.setVariable(variableName, Long.parseLong(newValue), false);
-											break;
-										case "Double":
-											a11Y.namespace.setVariable(variableName, Double.parseDouble(newValue), false);
-											break;
-										case "Float":
-											a11Y.namespace.setVariable(variableName, Float.parseFloat(newValue), false);
-											break;
-										default:
-											a11Y.namespace.setVariable(variableName, newValue, false);
-											break;
-									}
-								} else {
-									textLayout.setError("Cannot be empty.");
-									a11Y.namespace.setVariable(variableName, defaultValue, false);
-								}
-							} catch (Exception e) {}
-						}
-						afterTextChanged(android.text.Editable charSequence) {}
-					});
+                                        editText.addTextChangedListener(new TextWatcher() {
+                                                beforeTextChanged(CharSequence charSequence, int start, int count, int after) {}
+                                                onTextChanged(CharSequence charSequence, int start, int before, int count) {
+                                                        try {
+                                                                if (charSequence.length() > 0) {
+                                                                        textLayout.setError(null);
+                                                                        String newValue = charSequence.toString();
+                                                                        switch (inputClass) {
+                                                                                case "Integer":
+                                                                                        a11Y.namespace.setVariable(variableName, Integer.parseInt(newValue), false);
+                                                                                        break;
+                                                                                case "Long":
+                                                                                        a11Y.namespace.setVariable(variableName, Long.parseLong(newValue), false);
+                                                                                        break;
+                                                                                case "Double":
+                                                                                        a11Y.namespace.setVariable(variableName, Double.parseDouble(newValue), false);
+                                                                                        break;
+                                                                                case "Float":
+                                                                                        a11Y.namespace.setVariable(variableName, Float.parseFloat(newValue), false);
+                                                                                        break;
+                                                                                default:
+                                                                                        a11Y.namespace.setVariable(variableName, newValue, false);
+                                                                                        break;
+                                                                        }
+                                                                } else {
+                                                                        textLayout.setError("Cannot be empty.");
+                                                                        a11Y.namespace.setVariable(variableName, defaultValue, false);
+                                                                }
+                                                        } catch (Exception e) {}
+                                                }
+                                                afterTextChanged(android.text.Editable charSequence) {}
+                                        });
 
-					textLayout.addView(editText);
-					content.addView(textLayout);
-					addSpacer(activity, content);
-					return textLayout;
-				} catch (Exception e) {
-					/* Fall through to plain EditText */
-				}
-			}
+                                        textLayout.addView(editText);
+                                        content.addView(textLayout);
+                                        addSpacer(activity, content);
+                                        return textLayout;
+                                } catch (Exception e) {
+                                        /* Fall through to plain EditText */
+                                }
+                        }
 
-			/* Fallback: plain EditText */
-			editText = new EditText(activity);
-			editText.setHint(hintText);
-			Object value = a11Y.namespace.getVariable(variableName);
-			editText.setText(String.valueOf(value));
+                        /* Fallback: plain EditText */
+                        editText = new EditText(activity);
+                        editText.setHint(hintText);
+                        Object value = a11Y.namespace.getVariable(variableName);
+                        editText.setText(String.valueOf(value));
 
-			String inputClass = value.getClass().getSimpleName();
-			switch (inputClass) {
-				case "Float":
-				case "Double":
-					editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-					break;
-				case "Integer":
-				case "Long":
-					editText.setInputType(InputType.TYPE_CLASS_NUMBER);
-					break;
-			}
+                        String inputClass = value.getClass().getSimpleName();
+                        switch (inputClass) {
+                                case "Float":
+                                case "Double":
+                                        editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                                        break;
+                                case "Integer":
+                                case "Long":
+                                        editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+                                        break;
+                        }
 
-			editText.addTextChangedListener(new TextWatcher() {
-				beforeTextChanged(CharSequence charSequence, int start, int count, int after) {}
-				onTextChanged(CharSequence charSequence, int start, int before, int count) {
-					try {
-						if (charSequence.length() > 0) {
-							String newValue = charSequence.toString();
-							switch (inputClass) {
-								case "Integer":
-									a11Y.namespace.setVariable(variableName, Integer.parseInt(newValue), false);
-									break;
-								case "Long":
-									a11Y.namespace.setVariable(variableName, Long.parseLong(newValue), false);
-									break;
-								case "Double":
-									a11Y.namespace.setVariable(variableName, Double.parseDouble(newValue), false);
-									break;
-								case "Float":
-									a11Y.namespace.setVariable(variableName, Float.parseFloat(newValue), false);
-									break;
-								default:
-									a11Y.namespace.setVariable(variableName, newValue, false);
-									break;
-							}
-						} else {
-							a11Y.namespace.setVariable(variableName, defaultValue, false);
-						}
-					} catch (Exception e) {}
-				}
-				afterTextChanged(android.text.Editable charSequence) {}
-			});
+                        editText.addTextChangedListener(new TextWatcher() {
+                                beforeTextChanged(CharSequence charSequence, int start, int count, int after) {}
+                                onTextChanged(CharSequence charSequence, int start, int before, int count) {
+                                        try {
+                                                if (charSequence.length() > 0) {
+                                                        String newValue = charSequence.toString();
+                                                        switch (inputClass) {
+                                                                case "Integer":
+                                                                        a11Y.namespace.setVariable(variableName, Integer.parseInt(newValue), false);
+                                                                        break;
+                                                                case "Long":
+                                                                        a11Y.namespace.setVariable(variableName, Long.parseLong(newValue), false);
+                                                                        break;
+                                                                case "Double":
+                                                                        a11Y.namespace.setVariable(variableName, Double.parseDouble(newValue), false);
+                                                                        break;
+                                                                case "Float":
+                                                                        a11Y.namespace.setVariable(variableName, Float.parseFloat(newValue), false);
+                                                                        break;
+                                                                default:
+                                                                        a11Y.namespace.setVariable(variableName, newValue, false);
+                                                                        break;
+                                                        }
+                                                } else {
+                                                        a11Y.namespace.setVariable(variableName, defaultValue, false);
+                                                }
+                                        } catch (Exception e) {}
+                                }
+                                afterTextChanged(android.text.Editable charSequence) {}
+                        });
 
-			content.addView(editText);
-			addSpacer(activity, content);
-			return editText;
-		}
+                        content.addView(editText);
+                        addSpacer(activity, content);
+                        return editText;
+                }
 
-		createSwitch("Enable debug mode", "debugMe");
-		CompoundButton debugStepsSwitch = createSwitch("Control debug steps", "debugSteps");
-		debugStepsSwitch.setEnabled(false);
-		createSwitch("Show debugging information on a toast", "debugInfo");
-		createSwitch("Use offset for normal overlay", "useOffset");
-		createSwitch("Use offset for Accessibility", "useA11yOffset");
-		createSwitch("Waiting nodes will timeout if not found", "waitNodes");
-		createSwitch("Use accessibility for structure overlay", "useA11yStructure");
-		createSwitch("Long press a box enter quick mode instead of opening copy dialog", "quickAddMode");
-		createSwitch("Include all methods for quick mode", "includeAllMethods");
-		createInput("Find hint duration (ms)", "findDelay", 100);
-		createInput("Debug highlight duration (ms)", "debugDelay", 1000);
-		Object envInput = createInput("Project Path", "ENV", a11Y.ENV);
-		if (envInput instanceof android.widget.EditText) {
-			((EditText) envInput).setEnabled(false);
-		} else {
-			try { ((View) envInput).setEnabled(false); } catch (Exception e) {}
-		}
+                createSwitch("Enable debug mode", "debugMe");
+                CompoundButton debugStepsSwitch = createSwitch("Control debug steps", "debugSteps");
+                debugStepsSwitch.setEnabled(false);
+                createSwitch("Show debugging information on a toast", "debugInfo");
+                createSwitch("Use offset for normal overlay", "useOffset");
+                createSwitch("Use offset for Accessibility", "useA11yOffset");
+                createSwitch("Waiting nodes will timeout if not found", "waitNodes");
+                createSwitch("Use accessibility for structure overlay", "useA11yStructure");
+                createSwitch("Long press a box enter quick mode instead of opening copy dialog", "quickAddMode");
+                createSwitch("Include all methods for quick mode", "includeAllMethods");
+                createInput("Find hint duration (ms)", "findDelay", 100);
+                createInput("Debug highlight duration (ms)", "debugDelay", 1000);
+                Object envInput = createInput("Project Path", "ENV", a11Y.ENV);
+                if (envInput instanceof android.widget.EditText) {
+                        ((EditText) envInput).setEnabled(false);
+                } else {
+                        try { ((View) envInput).setEnabled(false); } catch (Exception e) {}
+                }
 
-		/* Close button - try MaterialButton, fallback to Button */
-		try {
-			com.google.android.material.button.MaterialButton saveBtn = new com.google.android.material.button.MaterialButton(activity);
-			saveBtn.setText("CLOSE");
-			saveBtn.setOnClickListener(new View.OnClickListener() {
-				onClick(View v) {
-					remove();
-				}
-			});
-			content.addView(saveBtn);
-		} catch (Exception e) {
-			Button saveBtn = new Button(activity);
-			saveBtn.setText("CLOSE");
-			saveBtn.setOnClickListener(new View.OnClickListener() {
-				onClick(View v) {
-					remove();
-				}
-			});
-			content.addView(saveBtn);
-		}
+                /* Close button - use MaterialButton if Material available, else Button */
+                if (useMaterial) {
+                        try {
+                                com.google.android.material.button.MaterialButton saveBtn = new com.google.android.material.button.MaterialButton(activity);
+                                saveBtn.setText("CLOSE");
+                                saveBtn.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                remove();
+                                        }
+                                });
+                                content.addView(saveBtn);
+                        } catch (Exception e) {
+                                Button saveBtn = new Button(activity);
+                                saveBtn.setText("CLOSE");
+                                saveBtn.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                remove();
+                                        }
+                                });
+                                content.addView(saveBtn);
+                        }
+                } else {
+                        Button saveBtn = new Button(activity);
+                        saveBtn.setText("CLOSE");
+                        saveBtn.setOnClickListener(new View.OnClickListener() {
+                                onClick(View v) {
+                                        remove();
+                                }
+                        });
+                        content.addView(saveBtn);
+                }
 
-		((ViewGroup) root).addView(main);
+                ((ViewGroup) root).addView(main);
 
-		activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-			onViewAttachedToWindow(View v) {
-				hasShown = true;
-				isRemoved = false;
-			}
-			onViewDetachedFromWindow(View v) {
-				isRemoved = true;
-				hasShown = false;
-				activity = null;
-			}
-		});
-		baseRoot.addView(root);
-		activity.setContentView(baseRoot);
-	}
+                activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                        onViewAttachedToWindow(View v) {
+                                hasShown = true;
+                                isRemoved = false;
+                        }
+                        onViewDetachedFromWindow(View v) {
+                                isRemoved = true;
+                                hasShown = false;
+                                activity = null;
+                        }
+                });
+                baseRoot.addView(root);
+                activity.setContentView(baseRoot);
+        }
 
-	Consumer uiLogic = new Consumer() {
-		accept(Object activityObj) {
-			layout((Activity) activityObj);
-		}
-	};
+        Consumer uiLogic = new Consumer() {
+                accept(Object activityObj) {
+                        layout((Activity) activityObj);
+                }
+        };
 
-	show() {
-		if (!hasShown) {
-			isRemoved = false;
-			hasShown = true;
-			tasker.doWithActivity(uiLogic);
-		}
-	}
+        show() {
+                if (!hasShown) {
+                        isRemoved = false;
+                        hasShown = true;
+                        tasker.doWithActivity(uiLogic);
+                }
+        }
 
-	toggle() {
-		if (!hasShown) {
-			show();
-		} else {
-			remove();
-		}
-	}
+        toggle() {
+                if (!hasShown) {
+                        show();
+                } else {
+                        remove();
+                }
+        }
 
-	return this;
+        return this;
 }

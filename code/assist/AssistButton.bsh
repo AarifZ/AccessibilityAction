@@ -45,13 +45,10 @@ public int dp(int value) {
   ───────────────────────────────────────────────────────────────*/
 public This AssistButton(int initialX, int initialY) {
 	This a11Y = tasker.getJavaVariable("a11Y");
-
-	/* Check if accessibility service is available for overlay */
-	Object svc = getService();
-	boolean useA11y = (svc != null && svc != void);
-
-	if (!useA11y) {
-		tasker.log("AssistButton: AccessibilityService unavailable, using application overlay");
+	final AccessibilityService accessibilityService = getService();
+	if (accessibilityService == null) {
+		tasker.showToast("Accessibility Service not running.");
+		return null;
 	}
 
 	/* Check Material Design availability */
@@ -63,6 +60,7 @@ public This AssistButton(int initialX, int initialY) {
 		useMaterial = false;
 	}
 
+	boolean useA11y = true;
 	This activeStructure;
 	This scriptEditor = ScriptEditor();
 	This assistSetting = AssistSetting();
@@ -86,35 +84,18 @@ public This AssistButton(int initialX, int initialY) {
 	setButtonColorState(Object btn, boolean isActive) {
 		int backgroundColor;
 		int iconColor;
-		if (tm != null) {
-			if (useMaterial) {
-				backgroundColor = isActive ? (int) tm.attr("colorPrimary") : Color.TRANSPARENT;
-				iconColor = isActive ? (int) tm.attr("colorOnPrimary") : (int) tm.attr("colorOnSurface");
-				((com.google.android.material.button.MaterialButton) btn).setSupportBackgroundTintList(ColorStateList.valueOf(backgroundColor));
-				((com.google.android.material.button.MaterialButton) btn).setIconTint(ColorStateList.valueOf(iconColor));
-			} else {
-				/* For ImageButton fallback */
-				backgroundColor = isActive ? (int) tm.attr("colorPrimary") : (int) tm.attr("colorSurfaceContainerHighest");
-				iconColor = isActive ? (int) tm.attr("colorOnPrimary") : (int) tm.attr("colorOnSurface");
-				((View) btn).setBackgroundColor(backgroundColor);
-				if (btn instanceof ImageView) {
-					((ImageView) btn).setColorFilter(iconColor);
-				}
-			}
+		if (useMaterial) {
+			backgroundColor = isActive ? (int) tm.attr("colorPrimary") : Color.TRANSPARENT;
+			iconColor = isActive ? (int) tm.attr("colorOnPrimary") : (int) tm.attr("colorOnSurface");
+			((com.google.android.material.button.MaterialButton) btn).setSupportBackgroundTintList(ColorStateList.valueOf(backgroundColor));
+			((com.google.android.material.button.MaterialButton) btn).setIconTint(ColorStateList.valueOf(iconColor));
 		} else {
-			/* Hardcoded fallback colors when ThemeManager is unavailable */
-			if (useMaterial) {
-				backgroundColor = isActive ? Color.parseColor("#6200EA") : Color.TRANSPARENT;
-				iconColor = isActive ? Color.WHITE : Color.parseColor("#E0E0E0");
-				((com.google.android.material.button.MaterialButton) btn).setSupportBackgroundTintList(ColorStateList.valueOf(backgroundColor));
-				((com.google.android.material.button.MaterialButton) btn).setIconTint(ColorStateList.valueOf(iconColor));
-			} else {
-				backgroundColor = isActive ? Color.parseColor("#6200EA") : Color.parseColor("#2C2C2C");
-				iconColor = isActive ? Color.WHITE : Color.parseColor("#E0E0E0");
-				((View) btn).setBackgroundColor(backgroundColor);
-				if (btn instanceof ImageView) {
-					((ImageView) btn).setColorFilter(iconColor);
-				}
+			/* For ImageButton fallback, adjust the background */
+			backgroundColor = isActive ? (int) tm.attr("colorPrimary") : (int) tm.attr("colorSurfaceContainerHighest");
+			iconColor = isActive ? (int) tm.attr("colorOnPrimary") : (int) tm.attr("colorOnSurface");
+			((View) btn).setBackgroundColor(backgroundColor);
+			if (btn instanceof ImageView) {
+				((ImageView) btn).setColorFilter(iconColor);
 			}
 		}
 	}
@@ -163,7 +144,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  UTILITY METHODS
-	──────────────────────────*/
+	───────────────────────────*/
 
 	removeStructure() {
 		if (activeStructure != null && !activeStructure.isRemoved()) {
@@ -256,7 +237,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  HANDLE
-	──────────────────────────*/
+	───────────────────────────*/
 	/* Get drawables with fallback */
 	Drawable focusIcon = null;
 	Drawable codeIcon = null;
@@ -285,7 +266,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  Edit Button - Adjusted Toggle
-	──────────────────────────*/
+	───────────────────────────*/
 	Object scriptBtn = IconButton(codeIcon, false);
 	((View) scriptBtn).setOnClickListener(new View.OnClickListener() {
 		onClick(View view) {
@@ -297,7 +278,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  Settings Button - Adjusted Dismissal
-	──────────────────────────*/
+	───────────────────────────*/
 	Object settingBtn = IconButton(settingsIcon, false);
 	((View) settingBtn).setOnClickListener(new View.OnClickListener() {
 		onClick(View view) {
@@ -309,7 +290,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  Close Button
-	──────────────────────────*/
+	───────────────────────────*/
 	Object closeBtn = IconButton(closeIcon, false);
 	((View) closeBtn).setOnClickListener(new View.OnClickListener() {
 		onClick(View view) {
@@ -321,7 +302,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  DRAG & REMOVE LOGIC
-	──────────────────────────*/
+	───────────────────────────*/
 	float initialTouchX;
 	float initialTouchY;
 	int initialWinX;
@@ -395,7 +376,7 @@ public This AssistButton(int initialX, int initialY) {
 
 	/*────────────────────────────
 	  HANDLE LISTENER
-	──────────────────────────*/
+	───────────────────────────*/
 	handleListener() {
 		onLongPress() {
 			try { vibrate(assistButton); } catch (Exception e) {}

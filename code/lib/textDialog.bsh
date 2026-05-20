@@ -22,142 +22,167 @@ import bsh.This;
   Falls back to standard Android components when Material Design is unavailable.
  ───────────────────────────────────────────────────────────────*/
 public void textDialog(String text) {
-	
-	Consumer uiLogic = new Consumer() {
-		accept(Object activityObj) {
-			final Activity activity = (Activity) activityObj;
-			float density = activity.getResources().getDisplayMetrics().density;
-			int dp16 = (int)(16 * density);
-			int padding = (int)(20 * density);
+        
+        Consumer uiLogic = new Consumer() {
+                accept(Object activityObj) {
+                        final Activity activity = (Activity) activityObj;
+                        float density = activity.getResources().getDisplayMetrics().density;
+                        int dp16 = (int)(16 * density);
+                        int padding = (int)(20 * density);
 
-			/* Window Configuration */
-			Window window = activity.getWindow();
-			window.requestFeature(Window.FEATURE_NO_TITLE);
-			window.setBackgroundDrawableResource(android.R.color.transparent);
-			
-			WindowManager.LayoutParams lp = window.getAttributes();
-			lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-			window.setAttributes(lp);
+                        /* Window Configuration */
+                        Window window = activity.getWindow();
+                        window.requestFeature(Window.FEATURE_NO_TITLE);
+                        window.setBackgroundDrawableResource(android.R.color.transparent);
+                        
+                        WindowManager.LayoutParams lp = window.getAttributes();
+                        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+                        window.setAttributes(lp);
 
-			/* Theme Setup */
-			This tm = null;
-			try {
-				tm = ThemeManager(activity);
-				tm.setThemeDark();
-			} catch (Exception e) {
-				tasker.log("ThemeManager unavailable for textDialog");
-			}
+                        /* Theme Setup */
+                        This tm = null;
+                        try {
+                                tm = ThemeManager(activity);
+                                tm.setThemeDark();
+                        } catch (Exception e) {
+                                tasker.log("ThemeManager unavailable for textDialog");
+                        }
 
-			/* Root Setup - try FloatingToolbarLayout, fallback to FrameLayout */
-			View root;
-			try {
-				root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activity);
-				root.setBackgroundColor(Color.TRANSPARENT);
-			} catch (Exception e) {
-				root = new FrameLayout(activity);
-				root.setBackgroundColor(Color.TRANSPARENT);
-			}
+                        /* Check Material availability early */
+                        boolean useMaterial = false;
+                        try {
+                                Class.forName("com.google.android.material.floatingtoolbar.FloatingToolbarLayout");
+                                useMaterial = true;
+                        } catch (Exception e) {
+                                useMaterial = false;
+                        }
 
-			/* Main Content Container */
-			LinearLayout main = new LinearLayout(activity);
-			main.setOrientation(LinearLayout.VERTICAL);
-			main.setPadding(padding, padding, padding, padding);
+                        /* Root Setup - use FloatingToolbarLayout if Material available, else FrameLayout */
+                        View root;
+                        if (useMaterial) {
+                                try {
+                                        root = new com.google.android.material.floatingtoolbar.FloatingToolbarLayout(activity);
+                                        root.setBackgroundColor(Color.TRANSPARENT);
+                                } catch (Exception e) {
+                                        root = new FrameLayout(activity);
+                                        root.setBackgroundColor(Color.TRANSPARENT);
+                                }
+                        } else {
+                                root = new FrameLayout(activity);
+                                root.setBackgroundColor(Color.TRANSPARENT);
+                        }
 
-			/* Styling the background of the main layout */
-			GradientDrawable shape = new GradientDrawable();
-			shape.setCornerRadius(padding);
-			int surfaceColor = (tm != null) ? (int) tm.attr("colorSurface") : Color.parseColor("#121212");
-			shape.setColor(surfaceColor);
-			main.setBackground(shape);
+                        /* Main Content Container */
+                        LinearLayout main = new LinearLayout(activity);
+                        main.setOrientation(LinearLayout.VERTICAL);
+                        main.setPadding(padding, padding, padding, padding);
 
-			/* Positioning the main layout at the bottom */
-			FrameLayout.LayoutParams mainParams = new FrameLayout.LayoutParams(-1, -2);
-			mainParams.gravity = Gravity.BOTTOM;
-			main.setLayoutParams(mainParams);
+                        /* Styling the background of the main layout */
+                        GradientDrawable shape = new GradientDrawable();
+                        shape.setCornerRadius(padding);
+                        int surfaceColor = (tm != null) ? (int) tm.attr("colorSurface") : Color.parseColor("#121212");
+                        shape.setColor(surfaceColor);
+                        main.setBackground(shape);
 
-			/* Input Layout - try TextInputLayout, fallback to plain EditText */
-			boolean useMaterial = false;
-			try {
-				Class.forName("com.google.android.material.textfield.TextInputLayout");
-				useMaterial = true;
-			} catch (Exception e) {
-				useMaterial = false;
-			}
+                        /* Positioning the main layout at the bottom */
+                        FrameLayout.LayoutParams mainParams = new FrameLayout.LayoutParams(-1, -2);
+                        mainParams.gravity = Gravity.BOTTOM;
+                        main.setLayoutParams(mainParams);
 
-			if (useMaterial) {
-				try {
-					com.google.android.material.textfield.TextInputLayout inputLayout = new com.google.android.material.textfield.TextInputLayout(activity);
-					com.google.android.material.textfield.TextInputEditText editText = new com.google.android.material.textfield.TextInputEditText(inputLayout.getContext());
-					editText.setText(text);
-					editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-					editText.setShowSoftInputOnFocus(false);
-					
-					inputLayout.addView(editText);
-					main.addView(inputLayout);
-				} catch (Exception e) {
-					EditText editText = new EditText(activity);
-					editText.setText(text);
-					editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-					editText.setShowSoftInputOnFocus(false);
-					editText.setBackgroundColor(Color.parseColor("#1e1e1e"));
-					editText.setTextColor(Color.WHITE);
-					main.addView(editText);
-				}
-			} else {
-				EditText editText = new EditText(activity);
-				editText.setText(text);
-				editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-				editText.setShowSoftInputOnFocus(false);
-				editText.setBackgroundColor(Color.parseColor("#1e1e1e"));
-				editText.setTextColor(Color.WHITE);
-				main.addView(editText);
-			}
+                        /* Input Layout - try TextInputLayout, fallback to plain EditText */
+                        boolean useInputMaterial = false;
+                        try {
+                                Class.forName("com.google.android.material.textfield.TextInputLayout");
+                                useInputMaterial = true;
+                        } catch (Exception e) {
+                                useInputMaterial = false;
+                        }
 
-			/* Spacer */
-			View spacer = new View(activity);
-			spacer.setLayoutParams(new LinearLayout.LayoutParams(-1, dp16));
-			main.addView(spacer);
+                        if (useInputMaterial) {
+                                try {
+                                        com.google.android.material.textfield.TextInputLayout inputLayout = new com.google.android.material.textfield.TextInputLayout(activity);
+                                        com.google.android.material.textfield.TextInputEditText editText = new com.google.android.material.textfield.TextInputEditText(inputLayout.getContext());
+                                        editText.setText(text);
+                                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                                        editText.setShowSoftInputOnFocus(false);
+                                        
+                                        inputLayout.addView(editText);
+                                        main.addView(inputLayout);
+                                } catch (Exception e) {
+                                        EditText editText = new EditText(activity);
+                                        editText.setText(text);
+                                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                                        editText.setShowSoftInputOnFocus(false);
+                                        editText.setBackgroundColor(Color.parseColor("#1e1e1e"));
+                                        editText.setTextColor(Color.WHITE);
+                                        main.addView(editText);
+                                }
+                        } else {
+                                EditText editText = new EditText(activity);
+                                editText.setText(text);
+                                editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                                editText.setShowSoftInputOnFocus(false);
+                                editText.setBackgroundColor(Color.parseColor("#1e1e1e"));
+                                editText.setTextColor(Color.WHITE);
+                                main.addView(editText);
+                        }
 
-			/* Buttons Row */
-			LinearLayout buttonRow = new LinearLayout(activity);
-			buttonRow.setOrientation(LinearLayout.HORIZONTAL);
-			buttonRow.setGravity(Gravity.END);
+                        /* Spacer */
+                        View spacer = new View(activity);
+                        spacer.setLayoutParams(new LinearLayout.LayoutParams(-1, dp16));
+                        main.addView(spacer);
 
-			/* Cancel button - try MaterialButton, fallback to Button */
-			try {
-				com.google.android.material.button.MaterialButton cancelBtn = new com.google.android.material.button.MaterialButton(activity);
-				cancelBtn.setText("CANCEL");
-				cancelBtn.setOnClickListener(new View.OnClickListener() {
-					onClick(View v) {
-						activity.finish();
-					}
-				});
-				buttonRow.addView(cancelBtn);
-			} catch (Exception e) {
-				Button cancelBtn = new Button(activity);
-				cancelBtn.setText("CANCEL");
-				cancelBtn.setOnClickListener(new View.OnClickListener() {
-					onClick(View v) {
-						activity.finish();
-					}
-				});
-				buttonRow.addView(cancelBtn);
-			}
-			main.addView(buttonRow);
+                        /* Buttons Row */
+                        LinearLayout buttonRow = new LinearLayout(activity);
+                        buttonRow.setOrientation(LinearLayout.HORIZONTAL);
+                        buttonRow.setGravity(Gravity.END);
 
-			/* Add main content to the root */
-			((ViewGroup) root).addView(main);
-			activity.setContentView(root);
-			activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-			onViewAttachedToWindow(View v) {
-				
-			}
-			onViewDetachedFromWindow(View v) {
-				activity.finish();
-			}
-		});
-		}
-	};
+                        /* Cancel button - use MaterialButton if Material available, else Button */
+                        if (useMaterial) {
+                                try {
+                                        com.google.android.material.button.MaterialButton cancelBtn = new com.google.android.material.button.MaterialButton(activity);
+                                        cancelBtn.setText("CANCEL");
+                                        cancelBtn.setOnClickListener(new View.OnClickListener() {
+                                                onClick(View v) {
+                                                        activity.finish();
+                                                }
+                                        });
+                                        buttonRow.addView(cancelBtn);
+                                } catch (Exception e) {
+                                        Button cancelBtn = new Button(activity);
+                                        cancelBtn.setText("CANCEL");
+                                        cancelBtn.setOnClickListener(new View.OnClickListener() {
+                                                onClick(View v) {
+                                                        activity.finish();
+                                                }
+                                        });
+                                        buttonRow.addView(cancelBtn);
+                                }
+                        } else {
+                                Button cancelBtn = new Button(activity);
+                                cancelBtn.setText("CANCEL");
+                                cancelBtn.setOnClickListener(new View.OnClickListener() {
+                                        onClick(View v) {
+                                                activity.finish();
+                                        }
+                                });
+                                buttonRow.addView(cancelBtn);
+                        }
+                        main.addView(buttonRow);
 
-	tasker.doWithActivity(uiLogic);
+                        /* Add main content to the root */
+                        ((ViewGroup) root).addView(main);
+                        activity.setContentView(root);
+                        activity.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                        onViewAttachedToWindow(View v) {
+                                
+                        }
+                        onViewDetachedFromWindow(View v) {
+                                activity.finish();
+                        }
+                });
+                }
+        };
+
+        tasker.doWithActivity(uiLogic);
 }
