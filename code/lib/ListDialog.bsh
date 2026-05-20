@@ -38,7 +38,10 @@ import io.reactivex.subjects.CompletableSubject;
 import java.util.concurrent.TimeUnit;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
-
+import android.content.res.ColorStateList;
+import androidx.appcompat.content.res.AppCompatResources;
+import com.google.android.material.textview.MaterialTextView;
+import com.google.android.material.card.MaterialCardView;
 /*───────────────────────────────────────────────────────────────
   ListDialog Component
   ───────────────────────────────────────────────────────────────*/
@@ -91,7 +94,7 @@ ListDialog(This config) {
 		activity = act;
 		activityContext = activity;
 		int displayId = DISPLAY_ID == void ? 0 : DISPLAY_ID;
-		// Commented since Tasker doens't support running on target display
+		// Commented since Tasker doens'title support running on target display
 		// DisplayManager dm = (DisplayManager) activity.getSystemService(Context.DISPLAY_SERVICE);
 		// if (dm != null) {
 		// 	Display targetDisplay = dm.getDisplay(displayId);
@@ -104,7 +107,7 @@ ListDialog(This config) {
 
 		Window window = activity.getWindow();
 		window.requestFeature(Window.FEATURE_NO_TITLE);
-		window.setLayout(-1, -2);
+		window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
 		window.setBackgroundDrawableResource(android.R.color.transparent);
 		window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
 
@@ -128,7 +131,7 @@ ListDialog(This config) {
 
 		GradientDrawable shape = new GradientDrawable();
 		shape.setCornerRadius(dp(28));
-		shape.setColor((int) tm.attr("colorSurfaceContainerHigh"));
+		shape.setColor((int) tm.color("colorSurfaceContainerHigh"));
 		mainContainer.setBackground(shape);
 		mainContainer.setClipToOutline(true);
 
@@ -178,62 +181,64 @@ ListDialog(This config) {
 				if (methodName.equals("getItemId")) return ((Integer) args[0]).longValue();
 				if (methodName.equals("getView")) {
 					int pos = (Integer) args[0];
-					View cnv = (View) args[1];
+					View adapterView = (View) args[1];
 					Map itemData = (Map) filteredList.get(pos);
-
+					Object sub = itemData.get("subtitle");
+					boolean hasSub = sub != null && !sub.toString().equals("");
 					LinearLayout row;
-					ImageView iv;
-					TextView t1, t2;
-
-					if (cnv == null) {
+					ImageView iconView;
+					TextView titleTextView, subtitleTextView;
+					
+					if (adapterView == null) {
 						row = new LinearLayout(activityContext);
 						row.setOrientation(0);
 						row.setGravity(Gravity.CENTER_VERTICAL);
 						row.setPadding(dp(0), dp(12), dp(0), dp(12));
 
-						iv = new ImageView(activityContext);
-						iv.setLayoutParams(new LinearLayout.LayoutParams(dp(40), dp(40)));
-						iv.setPadding(0, 0, dp(16), 0);
-						row.addView(iv);
+						iconView = new ImageView(activityContext);
+						iconView.setLayoutParams(new LinearLayout.LayoutParams(dp(40), dp(40)));
+						iconView.setPadding(0, 0, dp(16), 0);
+						row.addView(iconView);
 
-						LinearLayout tg = new LinearLayout(activityContext);
-						tg.setOrientation(1);
-						tg.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
+						LinearLayout itemLayout = new LinearLayout(activityContext);
+						itemLayout.setOrientation(1);
+						itemLayout.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1.0f));
 
-						t1 = new TextView(activityContext);
-						t1.setTextSize(16);
-						t1.setTextColor((int) tm.attr("colorOnSurface"));
-						t1.setEllipsize(TextUtils.TruncateAt.END);
-						tg.addView(t1);
+						titleTextView = new MaterialTextView(activityContext);
+						titleTextView.setTextSize(16);
+						if (hasSub) {
+							Typeface currentTypeface = titleTextView.getTypeface();
+							titleTextView.setTypeface(Typeface.create(currentTypeface, 600, false));
+						}
+						titleTextView.setEllipsize(TextUtils.TruncateAt.END);
+						itemLayout.addView(titleTextView);
 
-						t2 = new TextView(activityContext);
-						t2.setTextSize(14);
-						t2.setTextColor((int) tm.attr("colorOnSurfaceVariant"));
-						tg.addView(t2);
-						row.addView(tg);
+						subtitleTextView = new MaterialTextView(activityContext);
+						subtitleTextView.setTextSize(14);
+						subtitleTextView.setTextColor(subtitleTextView.getTextColors().withAlpha(190));
+						itemLayout.addView(subtitleTextView);
+						row.addView(itemLayout);
 
 						if (isMulti) {
-							CheckBox ck = new CheckBox(activityContext);
-							ck.setFocusable(false);
-							ck.setClickable(false);
-							row.addView(ck);
+							CheckBox checkBox = new CheckBox(activityContext);
+							checkBox.setFocusable(false);
+							checkBox.setClickable(false);
+							row.addView(checkBox);
 						}
 					} else {
-						row = (LinearLayout) cnv;
-						iv = (ImageView) row.getChildAt(0);
-						LinearLayout tg = (LinearLayout) row.getChildAt(1);
-						t1 = (TextView) tg.getChildAt(0);
-						t2 = (TextView) tg.getChildAt(1);
+						row = (LinearLayout) adapterView;
+						iconView = (ImageView) row.getChildAt(0);
+						LinearLayout itemLayout = (LinearLayout) row.getChildAt(1);
+						titleTextView = (TextView) itemLayout.getChildAt(0);
+						subtitleTextView = (TextView) itemLayout.getChildAt(1);
 					}
 
-					t1.setText((String) itemData.get("title"));
-					Object sub = itemData.get("subtitle");
-					boolean hasSub = sub != null && !sub.toString().equals("");
-					t2.setText(hasSub ? sub.toString() : "");
-					t2.setVisibility(hasSub ? View.VISIBLE : View.GONE);
+					titleTextView.setText((String) itemData.get("title"));
+					subtitleTextView.setText(hasSub ? sub.toString() : "");
+					subtitleTextView.setVisibility(hasSub ? View.VISIBLE : View.GONE);
 
 					if (isMulti) {
-						CheckBox cb = (CheckBox) row.getChildAt(row.getChildCount() - 1);
+						CheckBox checkBox = (CheckBox) row.getChildAt(row.getChildCount() - 1);
 						boolean found = false;
 						/* FIX: Use object identity to handle items with duplicate titles correctly */
 						for (int k = 0; k < selectedItems.size(); k++) {
@@ -242,11 +247,11 @@ ListDialog(This config) {
 								break;
 							}
 						}
-						cb.setChecked(found);
+						checkBox.setChecked(found);
 					}
 
 					if ("app".equals(itemData.get("type")) && sub != null) {
-						iv.setVisibility(0);
+						iconView.setVisibility(0);
 						Drawable dr = (Drawable) iconCache.get(sub.toString());
 						if (dr == null) {
 							try {
@@ -254,9 +259,9 @@ ListDialog(This config) {
 								iconCache.put(sub.toString(), dr);
 							} catch (Exception e) {}
 						}
-						iv.setImageDrawable(dr);
+						iconView.setImageDrawable(dr);
 					} else {
-						iv.setVisibility(8);
+						iconView.setVisibility(8);
 					}
 					return row;
 				}
@@ -270,10 +275,10 @@ ListDialog(This config) {
 		mainContainer.addView(listView);
 
 		/* Button Container */
-		LinearLayout bc = new LinearLayout(activityContext);
-		bc.setOrientation(0);
-		bc.setGravity(Gravity.END);
-		bc.setPadding(0, dp(8), 0, 0);
+		LinearLayout buttonsContainer = new LinearLayout(activityContext);
+		buttonsContainer.setOrientation(0);
+		buttonsContainer.setGravity(Gravity.END);
+		buttonsContainer.setPadding(0, dp(8), 0, 0);
 
 		MaterialButton cBtn = new MaterialButton(activityContext);
 		cBtn.setText("CANCEL");
@@ -283,39 +288,39 @@ ListDialog(This config) {
 				remove();
 			}
 		});
-		bc.addView(cBtn);
+		buttonsContainer.addView(cBtn);
 
 		if (isMulti) {
-			MaterialButton oBtn = new MaterialButton(activityContext);
+			MaterialButton okButton = new MaterialButton(activityContext);
 			LinearLayout.LayoutParams ol = new LinearLayout.LayoutParams(-2, -2);
 			ol.leftMargin = dp(12);
-			oBtn.setLayoutParams(ol);
-			oBtn.setText("OK");
-			oBtn.setOnClickListener(new View.OnClickListener() {
+			okButton.setLayoutParams(ol);
+			okButton.setText("OK");
+			okButton.setOnClickListener(new View.OnClickListener() {
 				onClick(View v) {
 					if (hasSuccessMulti) config.onSuccess(selectedItems);
 					remove();
 				}
 			});
-			bc.addView(oBtn);
+			buttonsContainer.addView(okButton);
 		}
 		
-		mainContainer.addView(bc);
+		mainContainer.addView(buttonsContainer);
 
 		listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 			onItemClick(AdapterView p, View v, int pos, long id) {
 				Map clicked = (Map) filteredList.get(pos);
 				clicked.put("index", pos);
 				if (isMulti) {
-					int idx = -1;
+					int index = -1;
 					/* FIX: Use object identity to handle items with duplicate titles correctly */
 					for (int i = 0; i < selectedItems.size(); i++) {
 						if (selectedItems.get(i) == clicked) { 
-							idx = i; 
+							index = i; 
 							break; 
 						}
 					}
-					if (idx != -1) selectedItems.remove(idx);
+					if (index != -1) selectedItems.remove(index);
 					else selectedItems.add(clicked);
 					adapter.notifyDataSetChanged();
 				} else {
@@ -327,22 +332,22 @@ ListDialog(This config) {
 
 		if (filterInput != null) {
 			filterInput.addTextChangedListener(new TextWatcher() {
-				beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				onTextChanged(CharSequence s, int start, int b, int c) {
-					String q = s.toString().toLowerCase();
+				beforeTextChanged(CharSequence sequence, int start, int count, int after) {}
+				onTextChanged(CharSequence sequence, int start, int b, int c) {
+					String filterQuery = sequence.toString().toLowerCase();
 					filteredList.clear();
-					if (q.isEmpty()) filteredList.addAll(originalList);
+					if (filterQuery.isEmpty()) filteredList.addAll(originalList);
 					else {
 						for (int i = 0; i < originalList.size(); i++) {
-							Map m = (Map) originalList.get(i);
-							String t = m.get("title").toString().toLowerCase();
-							String st = m.get("subtitle") != null ? m.get("subtitle").toString().toLowerCase() : "";
-							if (t.contains(q) || st.contains(q)) filteredList.add(m);
+							Map itemMap = (Map) originalList.get(i);
+							String title = itemMap.get("title").toString().toLowerCase();
+							String subTitle = itemMap.get("subtitle") != null ? itemMap.get("subtitle").toString().toLowerCase() : "";
+							if (title.contains(filterQuery) || subTitle.contains(filterQuery)) filteredList.add(itemMap);
 						}
 					}
 					adapter.notifyDataSetChanged();
 				}
-				afterTextChanged(Editable s) {}
+				afterTextChanged(Editable sequence) {}
 			});
 		}
 		
