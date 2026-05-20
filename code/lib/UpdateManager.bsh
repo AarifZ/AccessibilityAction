@@ -36,7 +36,7 @@ import org.json.JSONArray;
 
 UpdateManager() {
         String repo = "AccessibilityAction";
-        String owner = "AarifZ";
+        String owner = "mqwec43as";
         String targetFile = "AccessibilityAction.zip";
         String[] urls = { "https://github.com/" + owner + "/" + repo + "/releases/latest/download/" + targetFile };
         String directoryPath;
