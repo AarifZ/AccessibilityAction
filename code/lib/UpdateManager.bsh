@@ -35,372 +35,372 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 
 UpdateManager() {
-	String repo = "AccessibilityAction";
-	String owner = "mqwec43as";
-	String targetFile = "AccessibilityAction.zip";
-	String[] urls = { "https://github.com/" + owner + "/" + repo + "/releases/latest/download/" + targetFile };
-	String directoryPath;
+        String repo = "AccessibilityAction";
+        String owner = "AarifZ";
+        String targetFile = "AccessibilityAction.zip";
+        String[] urls = { "https://github.com/" + owner + "/" + repo + "/releases/latest/download/" + targetFile };
+        String directoryPath;
 
-	/*───────────────────────────────────────────────────────────────
-	  browseUrl(String url)
-	  Opens a URL in the system browser.
-	───────────────────────────────────────────────────────────────*/
-	public void browseUrl(String url) {
-		Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		context.startActivity(intent);
-	}
+        /*───────────────────────────────────────────────────────────────
+          browseUrl(String url)
+          Opens a URL in the system browser.
+        ───────────────────────────────────────────────────────────────*/
+        public void browseUrl(String url) {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+        }
 
-	/*───────────────────────────────────────────────────────────────
-	  makeRequest(String urlString, String method, String token, String bodyJson)
-	  Handles synchronous HTTP requests via standard HttpURLConnection.
-	───────────────────────────────────────────────────────────────*/
-	public HttpURLConnection makeRequest(String urlString, String method, String token, String bodyJson) {
-		URL url = new URL(urlString);
-		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.setRequestMethod(method);
-		connection.setRequestProperty("Accept", "application/vnd.github+json");
-		connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+        /*───────────────────────────────────────────────────────────────
+          makeRequest(String urlString, String method, String token, String bodyJson)
+          Handles synchronous HTTP requests via standard HttpURLConnection.
+        ───────────────────────────────────────────────────────────────*/
+        public HttpURLConnection makeRequest(String urlString, String method, String token, String bodyJson) {
+                URL url = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod(method);
+                connection.setRequestProperty("Accept", "application/vnd.github+json");
+                connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
 
-		if (token != null) {
-			connection.setRequestProperty("Authorization", "Bearer " + token);
-		}
+                if (token != null) {
+                        connection.setRequestProperty("Authorization", "Bearer " + token);
+                }
 
-		if (method.equals("POST") || method.equals("PATCH")) {
-			connection.setDoOutput(true);
-			connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-			OutputStream os = connection.getOutputStream();
-			byte[] input = bodyJson.getBytes("utf-8");
-			os.write(input, 0, input.length);
-			os.flush();
-			os.close();
-		}
+                if (method.equals("POST") || method.equals("PATCH")) {
+                        connection.setDoOutput(true);
+                        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                        OutputStream os = connection.getOutputStream();
+                        byte[] input = bodyJson.getBytes("utf-8");
+                        os.write(input, 0, input.length);
+                        os.flush();
+                        os.close();
+                }
 
-		int responseCode = connection.getResponseCode();
-		if (responseCode < 200 || responseCode >= 300) {
-			throw new JavaCodeException("HTTP Error (" + responseCode + "): " + connection.getResponseMessage());
-		}
-		return connection;
-	}
+                int responseCode = connection.getResponseCode();
+                if (responseCode < 200 || responseCode >= 300) {
+                        throw new JavaCodeException("HTTP Error (" + responseCode + "): " + connection.getResponseMessage());
+                }
+                return connection;
+        }
 
-	/*───────────────────────────────────────────────────────────────
-	  unzipFile(File zipFile, String targetFolderPath)
-	  Extracts a ZIP file to a target directory.
-	───────────────────────────────────────────────────────────────*/
-	public String unzipFile(File zipFile, String targetFolderPath) {
-		File baseDest = new File(targetFolderPath);
-		if (!baseDest.exists()) {
-			baseDest.mkdirs();
-		}
+        /*───────────────────────────────────────────────────────────────
+          unzipFile(File zipFile, String targetFolderPath)
+          Extracts a ZIP file to a target directory.
+        ───────────────────────────────────────────────────────────────*/
+        public String unzipFile(File zipFile, String targetFolderPath) {
+                File baseDest = new File(targetFolderPath);
+                if (!baseDest.exists()) {
+                        baseDest.mkdirs();
+                }
 
-		ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
-		ZipEntry entry = zis.getNextEntry();
+                ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
+                ZipEntry entry = zis.getNextEntry();
 
-		String firstDir = null;
-		byte[] buffer = new byte[1024];
-		while (entry != null) {
-			File newFile = new File(baseDest, entry.getName());
+                String firstDir = null;
+                byte[] buffer = new byte[1024];
+                while (entry != null) {
+                        File newFile = new File(baseDest, entry.getName());
 
-			if (entry.isDirectory()) {
-				newFile.mkdirs();
-				if (firstDir == null) {
-					firstDir = newFile.getAbsolutePath();
-				}
-			} else {
-				File parent = newFile.getParentFile();
-				if (parent != null && !parent.exists()) {
-					parent.mkdirs();
-				}
+                        if (entry.isDirectory()) {
+                                newFile.mkdirs();
+                                if (firstDir == null) {
+                                        firstDir = newFile.getAbsolutePath();
+                                }
+                        } else {
+                                File parent = newFile.getParentFile();
+                                if (parent != null && !parent.exists()) {
+                                        parent.mkdirs();
+                                }
 
-				FileOutputStream fos = new FileOutputStream(newFile);
-				int len;
-				while ((len = zis.read(buffer)) > 0) {
-					fos.write(buffer, 0, len);
-				}
-				fos.close();
-			}
-			zis.closeEntry();
-			entry = zis.getNextEntry();
-		}
-		zis.close();
+                                FileOutputStream fos = new FileOutputStream(newFile);
+                                int len;
+                                while ((len = zis.read(buffer)) > 0) {
+                                        fos.write(buffer, 0, len);
+                                }
+                                fos.close();
+                        }
+                        zis.closeEntry();
+                        entry = zis.getNextEntry();
+                }
+                zis.close();
 
-		return (firstDir != null) ? firstDir : baseDest.getAbsolutePath();
-	}
+                return (firstDir != null) ? firstDir : baseDest.getAbsolutePath();
+        }
 
-	/*───────────────────────────────────────────────────────────────
-	  downloadFile(String url, String destinationPath)
-	  Downloads a file and handles filename sniffing and renaming.
-	───────────────────────────────────────────────────────────────*/
-	public String downloadFile(String url, String destinationPath) {
-		HttpURLConnection connection = makeRequest(url, "GET", null, null);
+        /*───────────────────────────────────────────────────────────────
+          downloadFile(String url, String destinationPath)
+          Downloads a file and handles filename sniffing and renaming.
+        ───────────────────────────────────────────────────────────────*/
+        public String downloadFile(String url, String destinationPath) {
+                HttpURLConnection connection = makeRequest(url, "GET", null, null);
 
-		String contentType = connection.getContentType();
-		String contentDisp = connection.getHeaderField("Content-Disposition");
+                String contentType = connection.getContentType();
+                String contentDisp = connection.getHeaderField("Content-Disposition");
 
-		File dest = new File(destinationPath);
-		File finalFile = null;
-		if (destinationPath.endsWith("/") || (dest.exists() && dest.isDirectory())) {
-			if (!dest.exists()) {
-				dest.mkdirs();
-			}
+                File dest = new File(destinationPath);
+                File finalFile = null;
+                if (destinationPath.endsWith("/") || (dest.exists() && dest.isDirectory())) {
+                        if (!dest.exists()) {
+                                dest.mkdirs();
+                        }
 
-			String fileName = null;
-			if (contentDisp != null && contentDisp.contains("filename=")) {
-				int index = contentDisp.indexOf("filename=");
-				fileName = contentDisp.substring(index + 9).replace("\"", "");
-			}
+                        String fileName = null;
+                        if (contentDisp != null && contentDisp.contains("filename=")) {
+                                int index = contentDisp.indexOf("filename=");
+                                fileName = contentDisp.substring(index + 9).replace("\"", "");
+                        }
 
-			if (fileName == null) {
-				String uriPath = new java.net.URI(url).getPath();
-				fileName = uriPath.substring(uriPath.lastIndexOf('/') + 1);
-			}
+                        if (fileName == null) {
+                                String uriPath = new java.net.URI(url).getPath();
+                                fileName = uriPath.substring(uriPath.lastIndexOf('/') + 1);
+                        }
 
-			if (fileName == null || fileName.length() == 0 || fileName.equals("raw")) {
-				if (contentType != null && contentType.contains("application/zip")) {
-					fileName = "downloaded.zip";
-				} else {
-					fileName = "downloaded.txt";
-				}
-			}
+                        if (fileName == null || fileName.length() == 0 || fileName.equals("raw")) {
+                                if (contentType != null && contentType.contains("application/zip")) {
+                                        fileName = "downloaded.zip";
+                                } else {
+                                        fileName = "downloaded.txt";
+                                }
+                        }
 
-			finalFile = new File(dest, fileName);
-		} else {
-			File parent = dest.getParentFile();
-			if (parent != null && !parent.exists()) {
-				parent.mkdirs();
-			}
-			finalFile = dest;
-		}
+                        finalFile = new File(dest, fileName);
+                } else {
+                        File parent = dest.getParentFile();
+                        if (parent != null && !parent.exists()) {
+                                parent.mkdirs();
+                        }
+                        finalFile = dest;
+                }
 
-		InputStream is = connection.getInputStream();
-		FileOutputStream os = new FileOutputStream(finalFile);
-		byte[] buffer = new byte[4096];
-		int bytesRead;
-		while ((bytesRead = is.read(buffer)) != -1) {
-			os.write(buffer, 0, bytesRead);
-		}
-		os.flush();
-		os.close();
-		is.close();
-		connection.disconnect();
+                InputStream is = connection.getInputStream();
+                FileOutputStream os = new FileOutputStream(finalFile);
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                        os.write(buffer, 0, bytesRead);
+                }
+                os.flush();
+                os.close();
+                is.close();
+                connection.disconnect();
 
-		if (finalFile.getName().endsWith(".txt")) {
-			FileInputStream fis = new FileInputStream(finalFile);
-			byte[] headerSniff = new byte[4];
-			fis.read(headerSniff);
-			fis.close();
-			if (headerSniff[0] == 0x50 && headerSniff[1] == 0x4B) {
-				String newPath = finalFile.getAbsolutePath().replaceAll("(?i)\\.txt$", ".zip");
-				File renamed = new File(newPath);
-				finalFile.renameTo(renamed);
-				return renamed.getAbsolutePath();
-			}
-		}
+                if (finalFile.getName().endsWith(".txt")) {
+                        FileInputStream fis = new FileInputStream(finalFile);
+                        byte[] headerSniff = new byte[4];
+                        fis.read(headerSniff);
+                        fis.close();
+                        if (headerSniff[0] == 0x50 && headerSniff[1] == 0x4B) {
+                                String newPath = finalFile.getAbsolutePath().replaceAll("(?i)\\.txt$", ".zip");
+                                File renamed = new File(newPath);
+                                finalFile.renameTo(renamed);
+                                return renamed.getAbsolutePath();
+                        }
+                }
 
-		return finalFile.getAbsolutePath();
-	}
+                return finalFile.getAbsolutePath();
+        }
 
-	/*───────────────────────────────────────────────────────────────
-	  downloadAndUnzip(String url, String destinationPath)
-	  Downloads a file and extracts it if it's a ZIP or Base64 ZIP.
-	───────────────────────────────────────────────────────────────*/
-	public String downloadAndUnzip(String url, String destinationPath) {
-		String finalDownloadedPath = downloadFile(url, destinationPath);
-		File downloadedFile = new File(finalDownloadedPath);
-		FileInputStream fis = new FileInputStream(downloadedFile);
-		byte[] header = new byte[4];
-		fis.read(header);
-		fis.close();
-		boolean isRealZip = (header[0] == 0x50 && header[1] == 0x4B);
+        /*───────────────────────────────────────────────────────────────
+          downloadAndUnzip(String url, String destinationPath)
+          Downloads a file and extracts it if it's a ZIP or Base64 ZIP.
+        ───────────────────────────────────────────────────────────────*/
+        public String downloadAndUnzip(String url, String destinationPath) {
+                String finalDownloadedPath = downloadFile(url, destinationPath);
+                File downloadedFile = new File(finalDownloadedPath);
+                FileInputStream fis = new FileInputStream(downloadedFile);
+                byte[] header = new byte[4];
+                fis.read(header);
+                fis.close();
+                boolean isRealZip = (header[0] == 0x50 && header[1] == 0x4B);
 
-		if (!isRealZip) {
-			FileInputStream fis2 = new FileInputStream(downloadedFile);
-			byte[] data = new byte[(int) downloadedFile.length()];
-			fis2.read(data);
-			fis2.close();
+                if (!isRealZip) {
+                        FileInputStream fis2 = new FileInputStream(downloadedFile);
+                        byte[] data = new byte[(int) downloadedFile.length()];
+                        fis2.read(data);
+                        fis2.close();
 
-			String base64String = new String(data).trim();
-			try {
-				byte[] decodedBytes = android.util.Base64.decode(base64String, android.util.Base64.DEFAULT);
-				if (decodedBytes.length > 2 && decodedBytes[0] == 0x50 && decodedBytes[1] == 0x4B) {
-					FileOutputStream fos = new FileOutputStream(downloadedFile);
-					fos.write(decodedBytes);
-					fos.close();
-					isRealZip = true;
-				}
-			} catch (Exception e) {
-				return finalDownloadedPath;
-			}
-		}
+                        String base64String = new String(data).trim();
+                        try {
+                                byte[] decodedBytes = android.util.Base64.decode(base64String, android.util.Base64.DEFAULT);
+                                if (decodedBytes.length > 2 && decodedBytes[0] == 0x50 && decodedBytes[1] == 0x4B) {
+                                        FileOutputStream fos = new FileOutputStream(downloadedFile);
+                                        fos.write(decodedBytes);
+                                        fos.close();
+                                        isRealZip = true;
+                                }
+                        } catch (Exception e) {
+                                return finalDownloadedPath;
+                        }
+                }
 
-		if (finalDownloadedPath.toLowerCase().endsWith(".zip") || isRealZip) {
-			String extractedPath = unzipFile(downloadedFile, downloadedFile.getParent());
-			downloadedFile.delete();
-			return extractedPath;
-		}
+                if (finalDownloadedPath.toLowerCase().endsWith(".zip") || isRealZip) {
+                        String extractedPath = unzipFile(downloadedFile, downloadedFile.getParent());
+                        downloadedFile.delete();
+                        return extractedPath;
+                }
 
-		return finalDownloadedPath;
-	}
+                return finalDownloadedPath;
+        }
 
-	/*───────────────────────────────────────────────────────────────
-	  pickDirectory(String initialUriString)
-	  Requests user to pick a directory via Document Tree intent.
-	───────────────────────────────────────────────────────────────*/
-	public String pickDirectory(String initialUriString) {
-		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        /*───────────────────────────────────────────────────────────────
+          pickDirectory(String initialUriString)
+          Requests user to pick a directory via Document Tree intent.
+        ───────────────────────────────────────────────────────────────*/
+        public String pickDirectory(String initialUriString) {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
 
-		if (initialUriString != null && initialUriString != void) {
-			Uri pickerInitialUri = Uri.parse(initialUriString);
-			intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
-		}
+                if (initialUriString != null && initialUriString != void) {
+                        Uri pickerInitialUri = Uri.parse(initialUriString);
+                        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
+                }
 
-		io.reactivex.Single resultSingle = tasker.getWithActivityForResult(intent);
-		Intent resultIntent = (Intent) resultSingle.blockingGet();
+                io.reactivex.Single resultSingle = tasker.getWithActivityForResult(intent);
+                Intent resultIntent = (Intent) resultSingle.blockingGet();
 
-		if (resultIntent == null) {
-			return null;
-		}
+                if (resultIntent == null) {
+                        return null;
+                }
 
-		Uri treeUri = resultIntent.getData();
-		return tasker.convertToRealFilePath(treeUri);
-	}
+                Uri treeUri = resultIntent.getData();
+                return tasker.convertToRealFilePath(treeUri);
+        }
 
-	/*───────────────────────────────────────────────────────────────
-	  confirmDialog(String title, String message, String positiveText, String negativeText, String neutralText)
-	  Shows a blocking Confirmation Dialog.
-	───────────────────────────────────────────────────────────────*/
-	public String confirmDialog(String title, String message, String positiveText, String negativeText, String neutralText) {
-		SingleSubject resultSignal = SingleSubject.create();
-		Consumer myActivityConsumer = new Consumer() {
-			accept(Object activity) {
-				final Activity currentActivity = (Activity) activity;
-				DialogInterface.OnClickListener onClickListener = new DialogInterface.OnClickListener() {
-					onClick(DialogInterface dialog, int which) {
-						String result = "canceled";
-						if (which == DialogInterface.BUTTON_POSITIVE) {
-							result = positiveText;
-						} else if (which == DialogInterface.BUTTON_NEGATIVE) {
-							result = negativeText;
-						} else if (which == DialogInterface.BUTTON_NEUTRAL) {
-							result = neutralText;
-						}
-						resultSignal.onSuccess(result);
-						currentActivity.finish();
-					}
-				};
+        /*───────────────────────────────────────────────────────────────
+          confirmDialog(String title, String message, String positiveText, String negativeText, String neutralText)
+          Shows a blocking Confirmation Dialog.
+        ───────────────────────────────────────────────────────────────*/
+        public String confirmDialog(String title, String message, String positiveText, String negativeText, String neutralText) {
+                SingleSubject resultSignal = SingleSubject.create();
+                Consumer myActivityConsumer = new Consumer() {
+                        accept(Object activity) {
+                                final Activity currentActivity = (Activity) activity;
+                                DialogInterface.OnClickListener onClickListener = new DialogInterface.OnClickListener() {
+                                        onClick(DialogInterface dialog, int which) {
+                                                String result = "canceled";
+                                                if (which == DialogInterface.BUTTON_POSITIVE) {
+                                                        result = positiveText;
+                                                } else if (which == DialogInterface.BUTTON_NEGATIVE) {
+                                                        result = negativeText;
+                                                } else if (which == DialogInterface.BUTTON_NEUTRAL) {
+                                                        result = neutralText;
+                                                }
+                                                resultSignal.onSuccess(result);
+                                                currentActivity.finish();
+                                        }
+                                };
 
-				DialogInterface.OnCancelListener onCancelListener = new DialogInterface.OnCancelListener() {
-					onCancel(DialogInterface dialog) {
-						resultSignal.onSuccess("canceled");
-						currentActivity.finish();
-					}
-				};
+                                DialogInterface.OnCancelListener onCancelListener = new DialogInterface.OnCancelListener() {
+                                        onCancel(DialogInterface dialog) {
+                                                resultSignal.onSuccess("canceled");
+                                                currentActivity.finish();
+                                        }
+                                };
 
-				AlertDialog.Builder builder = new AlertDialog.Builder(currentActivity);
-				builder.setTitle(title);
-				builder.setMessage(message);
-				builder.setPositiveButton(positiveText, onClickListener);
-				builder.setNegativeButton(negativeText, onClickListener);
-				if (neutralText != null) {
-					builder.setNeutralButton(neutralText, onClickListener);
-				}
+                                AlertDialog.Builder builder = new AlertDialog.Builder(currentActivity);
+                                builder.setTitle(title);
+                                builder.setMessage(message);
+                                builder.setPositiveButton(positiveText, onClickListener);
+                                builder.setNegativeButton(negativeText, onClickListener);
+                                if (neutralText != null) {
+                                        builder.setNeutralButton(neutralText, onClickListener);
+                                }
 
-				builder.setCancelable(true);
-				builder.setOnCancelListener(onCancelListener);
-				builder.create().show();
-			}
-		};
+                                builder.setCancelable(true);
+                                builder.setOnCancelListener(onCancelListener);
+                                builder.create().show();
+                        }
+                };
 
-		tasker.doWithActivity(myActivityConsumer);
-		String userChoice = (String) resultSignal.blockingGet();
-		return userChoice;
-	}
+                tasker.doWithActivity(myActivityConsumer);
+                String userChoice = (String) resultSignal.blockingGet();
+                return userChoice;
+        }
 
-	public String update() {
-		if (directoryPath == null) {
-			tasker.showToast("No folder selected");
-			return null;
-		}
-		for (int j = 0; j < urls.length; j++) {
-			downloadAndUnzip(urls[j], directoryPath);
-		}
-		return directoryPath;
-	}
+        public String update() {
+                if (directoryPath == null) {
+                        tasker.showToast("No folder selected");
+                        return null;
+                }
+                for (int j = 0; j < urls.length; j++) {
+                        downloadAndUnzip(urls[j], directoryPath);
+                }
+                return directoryPath;
+        }
 
-	getLatestUrls() {
-		String preReleaseUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/releases";
-		HttpURLConnection connection = makeRequest(preReleaseUrl, "GET", null, null);
-		
-		InputStream is = connection.getInputStream();
-		BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-		StringBuilder sb = new StringBuilder();
-		String line;
-		while ((line = reader.readLine()) != null) {
-			sb.append(line);
-		}
-		reader.close();
-		connection.disconnect();
+        getLatestUrls() {
+                String preReleaseUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/releases";
+                HttpURLConnection connection = makeRequest(preReleaseUrl, "GET", null, null);
+                
+                InputStream is = connection.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                        sb.append(line);
+                }
+                reader.close();
+                connection.disconnect();
 
-		String bodyJson = sb.toString();
-		JSONArray jsonArray = new JSONArray(bodyJson);
-		JSONArray assetsArray = jsonArray.getJSONObject(0).getJSONArray("assets");
-		List latestUrls = new ArrayList();
-		for (int i = 0; i < assetsArray.length(); i++) {
-			String url = assetsArray.getJSONObject(i).getString("browser_download_url");
-			String fileName = assetsArray.getJSONObject(i).getString("name");
-			if (fileName.equals(targetFile)) {
-				latestUrls.add(url);
-			}
-		}
-		return latestUrls;
-	}
+                String bodyJson = sb.toString();
+                JSONArray jsonArray = new JSONArray(bodyJson);
+                JSONArray assetsArray = jsonArray.getJSONObject(0).getJSONArray("assets");
+                List latestUrls = new ArrayList();
+                for (int i = 0; i < assetsArray.length(); i++) {
+                        String url = assetsArray.getJSONObject(i).getString("browser_download_url");
+                        String fileName = assetsArray.getJSONObject(i).getString("name");
+                        if (fileName.equals(targetFile)) {
+                                latestUrls.add(url);
+                        }
+                }
+                return latestUrls;
+        }
 
-	public String updatePreRelease() {
-		if (directoryPath == null) {
-			tasker.showToast("No folder selected");
-			return null;
-		}
-		List preReleaseUrl = getLatestUrls();
-		for (String url : preReleaseUrl) {
-			downloadAndUnzip(url, directoryPath);
-		}
-		return directoryPath;
-	}
+        public String updatePreRelease() {
+                if (directoryPath == null) {
+                        tasker.showToast("No folder selected");
+                        return null;
+                }
+                List preReleaseUrl = getLatestUrls();
+                for (String url : preReleaseUrl) {
+                        downloadAndUnzip(url, directoryPath);
+                }
+                return directoryPath;
+        }
 
-	/*───────────────────────────────────────────────────────────────
-	  importFirst()
-	  High-level logic for importing resources from GitHub.
-	───────────────────────────────────────────────────────────────*/
-	importDialog() {
-		String message = "Select a folder to save all the necessary files.\n\nMake sure to create a folder first unless you want to save them there";
-		String title = "Download";
-		String positiveText = "Next";
-		String negativeText = "Cancel";
-		String neutralText = "Check URLs";
-		String warningText = "\n\nMake sure to always check the links first by inspecting the code and you're confident that they are safe before importing.";
-		String fullMessage = message + warningText;
-		String input = confirmDialog(title, fullMessage, positiveText, negativeText, neutralText);
-		if (input.toLowerCase().equals("cancel") || input.equals("canceled")) {
-			tasker.showToast("Resources are not imported!");
-			return null;
-		} else if (input.toLowerCase().equals("check urls")) {
-			for (int i = 0; i < urls.length; i++) {
-				browseUrl(urls[i]);
-				java.lang.Thread.sleep(200);
-			}
-			return null;
-		}
-		String pickPath = "/storage/emulated/0";
-		if (directoryPath != null) pickPath = directoryPath;
+        /*───────────────────────────────────────────────────────────────
+          importFirst()
+          High-level logic for importing resources from GitHub.
+        ───────────────────────────────────────────────────────────────*/
+        importDialog() {
+                String message = "Select a folder to save all the necessary files.\n\nMake sure to create a folder first unless you want to save them there";
+                String title = "Download";
+                String positiveText = "Next";
+                String negativeText = "Cancel";
+                String neutralText = "Check URLs";
+                String warningText = "\n\nMake sure to always check the links first by inspecting the code and you're confident that they are safe before importing.";
+                String fullMessage = message + warningText;
+                String input = confirmDialog(title, fullMessage, positiveText, negativeText, neutralText);
+                if (input.toLowerCase().equals("cancel") || input.equals("canceled")) {
+                        tasker.showToast("Resources are not imported!");
+                        return null;
+                } else if (input.toLowerCase().equals("check urls")) {
+                        for (int i = 0; i < urls.length; i++) {
+                                browseUrl(urls[i]);
+                                java.lang.Thread.sleep(200);
+                        }
+                        return null;
+                }
+                String pickPath = "/storage/emulated/0";
+                if (directoryPath != null) pickPath = directoryPath;
 
-		directoryPath = pickDirectory(pickPath);
-		String updatePath = update();
-		if (updatePath != null) {
-			tasker.showToast("Download is finished");
-			return updatePath;
-		}
-		return null;
-	}
+                directoryPath = pickDirectory(pickPath);
+                String updatePath = update();
+                if (updatePath != null) {
+                        tasker.showToast("Download is finished");
+                        return updatePath;
+                }
+                return null;
+        }
 
-	return this;
+        return this;
 }

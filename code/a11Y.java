@@ -8,221 +8,236 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 a11Y() {
-	// 1. Retrieve the previous instance from Tasker's memory
-	This old = tasker.getJavaVariable("a11Y");
-	if (old != null) {
-		try {
-			if (old.executor != void && old.executor != null) {
-				if (!old.executor.isShutdown()) {
-					old.executor.shutdownNow();
-				}
-			}
-			old.removeAssist();
-		} catch (Exception e) {}
-		
-	}
+        // 1. Retrieve the previous instance from Tasker's memory
+        This old = tasker.getJavaVariable("a11Y");
+        if (old != null) {
+                try {
+                        if (old.executor != void && old.executor != null) {
+                                if (!old.executor.isShutdown()) {
+                                        old.executor.shutdownNow();
+                                }
+                        }
+                        old.removeAssist();
+                } catch (Exception e) {}
+                
+        }
 
-	boolean debugSteps = false;
-	boolean debugMe = false;
-	boolean debugInfo = true;
-	long findDelay = 100;
-	long debugDelay = 1000;
-	long stepDelay = 50;
-	long waitNodesTimeout = 10000;
-	List assistOverlays = new ArrayList();
-	String ENV;
-	This assistButton;
-	This updateManager;
-	boolean useOffset = true;
-	boolean useA11yOffset = true;
-	boolean waitNodes = true;
-	boolean useA11yStructure = false;
-	boolean includeAllMethods = false;
-	boolean quickAddMode = true;
-	boolean updatePreRelease = false;
-	long lastActionPickerReminder = 0;
-	long actionPickerReminderDelay = 120000;
-	This TOP;
-	String scriptEditor = "";
-	This inspector;
-	String LOG_FILE;
+        boolean debugSteps = false;
+        boolean debugMe = false;
+        boolean debugInfo = true;
+        long findDelay = 100;
+        long debugDelay = 1000;
+        long stepDelay = 50;
+        long waitNodesTimeout = 10000;
+        List assistOverlays = new ArrayList();
+        String ENV;
+        This assistButton;
+        This updateManager;
+        boolean useOffset = true;
+        boolean useA11yOffset = true;
+        boolean waitNodes = true;
+        boolean useA11yStructure = false;
+        boolean includeAllMethods = false;
+        boolean quickAddMode = true;
+        boolean updatePreRelease = false;
+        long lastActionPickerReminder = 0;
+        long actionPickerReminderDelay = 120000;
+        This TOP;
+        String scriptEditor = "";
+        This inspector;
+        String LOG_FILE;
 
-	ThreadFactory customThreadFactory = new ThreadFactory() {
-		private AtomicInteger count = new AtomicInteger(0);
-		public Thread newThread(Runnable r) {
-			Thread thread = new Thread(r, "a11Y_" + count.incrementAndGet());
-			thread.setPriority(Thread.MAX_PRIORITY);
-			return thread;
-		}
-	};
+        ThreadFactory customThreadFactory = new ThreadFactory() {
+                private AtomicInteger count = new AtomicInteger(0);
+                public Thread newThread(Runnable r) {
+                        Thread thread = new Thread(r, "a11Y_" + count.incrementAndGet());
+                        thread.setPriority(Thread.MAX_PRIORITY);
+                        return thread;
+                }
+        };
 
-	ThreadPoolExecutor executor = new ThreadPoolExecutor(
-		1, // Core size
-		1, // Max size
-		30, // Idle timeout
-		TimeUnit.SECONDS, // Timeout unit
-		new ArrayBlockingQueue(1), // Task wait-list
-		customThreadFactory, // Thread factory
-		new ThreadPoolExecutor.DiscardOldestPolicy()
-	);
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+                1, // Core size
+                1, // Max size
+                30, // Idle timeout
+                TimeUnit.SECONDS, // Timeout unit
+                new ArrayBlockingQueue(1), // Task wait-list
+                customThreadFactory, // Thread factory
+                new ThreadPoolExecutor.DiscardOldestPolicy()
+        );
 
-	reload() {
-		executor.execute(new Runnable() {
-			run() {
-				try {
-					if (ENV != null) source(ENV + "/a11Y.java");
-				} catch (e) {
-					tasker.logAndToast(e.getMessage(), LOG_FILE);
-				}
-			}
-		});
-	}
+        reload() {
+                executor.execute(new Runnable() {
+                        run() {
+                                try {
+                                        if (ENV != null) source(ENV + "/a11Y.java");
+                                } catch (e) {
+                                        tasker.logAndToast(e.getMessage(), LOG_FILE);
+                                }
+                        }
+                });
+        }
 
-	debug() {
-		debugMe = true;
-	}
+        debug() {
+                debugMe = true;
+        }
 
-	set(This THIS) {
-		THIS.namespace.setVariable("debugMe", debugMe, false);
-		THIS.namespace.setVariable("debugSteps", debugSteps, false);
-		THIS.namespace.setVariable("debugInfo", debugInfo, false);
-		THIS.namespace.setVariable("findDelay", findDelay, false);
-		THIS.namespace.setVariable("debugDelay", debugDelay, false);
-		THIS.namespace.setVariable("useOffset", useOffset, false);
-		THIS.namespace.setVariable("useA11yOffset", useA11yOffset, false);
-		THIS.namespace.setVariable("waitNodes", waitNodes, false);
-		THIS.namespace.setVariable("useA11yStructure", useA11yStructure, false);
-		THIS.namespace.setVariable("includeAllMethods", includeAllMethods, false);
-		THIS.namespace.setVariable("quickAddMode", quickAddMode, false);
-		THIS.namespace.setVariable("stepDelay", stepDelay, false);
-		THIS.namespace.setVariable("waitNodesTimeout", waitNodesTimeout, false);
-		if (ENV == null) {
-			String superImport = tasker.getVariable("ImportJava");
-			try {
-				this.interpreter.source(superImport);
-				THIS.invokeMethod("IMPORT", new Object[] { "AccessibilityAction" });
-				if (THIS.namespace.getVariable("MAIN_DIRECTORY") != null) ENV = THIS.namespace.getVariable("MAIN_DIRECTORY");
-				THIS.namespace.setVariable("a11Y", THIS, false);
-			} catch (e) {
-				tasker.showToast("Please set the folder with a11Y.setEnv(\"Directory path\")");
-				return;
-			}
-		} else {
-			this.interpreter.source(ENV + "/import.java");
-		}
-		return THIS;
-	}
+        set(This THIS) {
+                THIS.namespace.setVariable("debugMe", debugMe, false);
+                THIS.namespace.setVariable("debugSteps", debugSteps, false);
+                THIS.namespace.setVariable("debugInfo", debugInfo, false);
+                THIS.namespace.setVariable("findDelay", findDelay, false);
+                THIS.namespace.setVariable("debugDelay", debugDelay, false);
+                THIS.namespace.setVariable("useOffset", useOffset, false);
+                THIS.namespace.setVariable("useA11yOffset", useA11yOffset, false);
+                THIS.namespace.setVariable("waitNodes", waitNodes, false);
+                THIS.namespace.setVariable("useA11yStructure", useA11yStructure, false);
+                THIS.namespace.setVariable("includeAllMethods", includeAllMethods, false);
+                THIS.namespace.setVariable("quickAddMode", quickAddMode, false);
+                THIS.namespace.setVariable("stepDelay", stepDelay, false);
+                THIS.namespace.setVariable("waitNodesTimeout", waitNodesTimeout, false);
+                if (ENV == null) {
+                        String superImport = tasker.getVariable("ImportJava");
+                        try {
+                                this.interpreter.source(superImport);
+                                THIS.invokeMethod("IMPORT", new Object[] { "AccessibilityAction" });
+                                if (THIS.namespace.getVariable("MAIN_DIRECTORY") != null) ENV = THIS.namespace.getVariable("MAIN_DIRECTORY");
+                                THIS.namespace.setVariable("a11Y", THIS, false);
+                        } catch (e) {
+                                tasker.showToast("Please set the folder with a11Y.setEnv(\"Directory path\")");
+                                return;
+                        }
+                } else {
+                        this.interpreter.source(ENV + "/import.java");
+                }
+                return THIS;
+        }
 
-	set() {
-		set(this.caller);
-	}
+        set() {
+                set(this.caller);
+        }
 
-	setEnv(String path) {
-		ENV = path;
-		LOG_FILE = path + "/log.txt";
-	}
+        setEnv(String path) {
+                ENV = path;
+                LOG_FILE = path + "/log.txt";
+        }
 
-	resetEnv() {
-		ENV = null;
-	}
+        resetEnv() {
+                ENV = null;
+        }
 
-	reset() {
-		debugSteps = false;
-		debugMe = false;
-		debugInfo = true;
-		findDelay = 100;
-		debugDelay = 1000;
-		useOffset = true;
-		useA11yOffset = true;
-		waitNodes = true;
-		useA11yStructure = false;
-	}
+        reset() {
+                debugSteps = false;
+                debugMe = false;
+                debugInfo = true;
+                findDelay = 100;
+                debugDelay = 1000;
+                useOffset = true;
+                useA11yOffset = true;
+                waitNodes = true;
+                useA11yStructure = false;
+        }
 
 
-	addOverlay(This overlay) {
-		assistOverlays.add(overlay);
-	};
+        addOverlay(This overlay) {
+                assistOverlays.add(overlay);
+        };
 
-	removeOverlay(This overlay) {
-		assistOverlays.remove(overlay);
-	}
+        removeOverlay(This overlay) {
+                assistOverlays.remove(overlay);
+        }
 
-	clean() {
-		if (assistOverlays.isEmpty()) return;
-		for (This overlay: assistOverlays) {
-			try { overlay.remove(); } catch (e) {}
-		}
-		assistOverlays.clear();
-	}
+        clean() {
+                if (assistOverlays.isEmpty()) return;
+                for (This overlay: assistOverlays) {
+                        try { overlay.remove(); } catch (e) {}
+                }
+                assistOverlays.clear();
+        }
 
-	addEvent(String eventId, This eventListener) {
-		This a11E = tasker.getJavaVariable("a11E");
-		if (a11E != null) a11E.add(eventId, eventListener);
-	}
+        addEvent(String eventId, This eventListener) {
+                This a11E = tasker.getJavaVariable("a11E");
+                if (a11E != null) a11E.add(eventId, eventListener);
+        }
 
-	removeEvent(String eventId) {
-		This a11E = tasker.getJavaVariable("a11E");
-		if (a11E != null) a11E.remove(eventId);
-	}
+        removeEvent(String eventId) {
+                This a11E = tasker.getJavaVariable("a11E");
+                if (a11E != null) a11E.remove(eventId);
+        }
 
-	removeEvents() {
-		This a11E = tasker.getJavaVariable("a11E");
-		if (a11E != null) a11E.removeEvents();
-	}
+        removeEvents() {
+                This a11E = tasker.getJavaVariable("a11E");
+                if (a11E != null) a11E.removeEvents();
+        }
 
-	getEvents() {
-		This a11E = tasker.getJavaVariable("a11E");
-		if (a11E != null) {
-			Set keyset = a11E.listeners.keySet();
-			return new ArrayList(keyset);
-		}
-	}
+        getEvents() {
+                This a11E = tasker.getJavaVariable("a11E");
+                if (a11E != null) {
+                        Set keyset = a11E.listeners.keySet();
+                        return new ArrayList(keyset);
+                }
+        }
 
-	if (old != null) {
-		if (old.scriptEditor != void) scriptEditor = old.scriptEditor;
-	}
+        if (old != null) {
+                if (old.scriptEditor != void) scriptEditor = old.scriptEditor;
+        }
 
-	showAssist() {
-		if (!assistButton.isShown) assistButton.show();
-	}
+        showAssist() {
+                if (assistButton == null || assistButton == void) {
+                        tasker.log("showAssist: assistButton is not initialized");
+                        return;
+                }
+                try {
+                        if (!assistButton.isShown) assistButton.show();
+                } catch (Exception e) {
+                        tasker.log("showAssist error: " + e.getMessage());
+                }
+        }
 
-	removeAssist() {
-		if (assistButton.isShown) assistButton.remove();
-	}
+        removeAssist() {
+                if (assistButton == null || assistButton == void) return;
+                try {
+                        if (assistButton.isShown) assistButton.remove();
+                } catch (Exception e) {}
+        }
 
-	update() {
-		if (updateManager != null) {
-			if (updatePreRelease) {
-				updateManager.updatePreRelease();
-			}
-			else {
-				updateManager.update();
-			}
-		}
+        update() {
+                if (updateManager != null) {
+                        if (updatePreRelease) {
+                                updateManager.updatePreRelease();
+                        }
+                        else {
+                                updateManager.update();
+                        }
+                }
 
-		reload();
+                reload();
 
-	}
+        }
 
-	updatePreRelease() {
-		if (updateManager != null) {
-			updateManager.updatePreRelease();
-			reload();
-		}
-	}
+        updatePreRelease() {
+                if (updateManager != null) {
+                        updateManager.updatePreRelease();
+                        reload();
+                }
+        }
 
-	muteEvents() {
-		This a11E = tasker.getJavaVariable("a11E");
-		a11E.mute();
-	}
+        muteEvents() {
+                try {
+                        This a11E = tasker.getJavaVariable("a11E");
+                        if (a11E != null) a11E.mute();
+                } catch (Exception e) {}
+        }
 
-	unmuteEvents() {
-		This a11E = tasker.getJavaVariable("a11E");
-		a11E.unmute();
-	}
+        unmuteEvents() {
+                try {
+                        This a11E = tasker.getJavaVariable("a11E");
+                        if (a11E != null) a11E.unmute();
+                } catch (Exception e) {}
+        }
 
-	long startTime = System.currentTimeMillis();
-	return this;
+        long startTime = System.currentTimeMillis();
+        return this;
 
 };
 
@@ -238,14 +253,30 @@ tasker.setJavaVariable("a11Y", a11Y);
 This a11E = a11E();
 tasker.setJavaVariable("a11E", a11E);
 
-This assistButton = AssistButton(0.8, 0.8);
-a11Y.namespace.setVariable("assistButton", assistButton, false);
+try {
+        This assistButton = AssistButton(0.8, 0.8);
+        if (assistButton == null) {
+                tasker.log("AssistButton creation returned null - assist button unavailable");
+        }
+        a11Y.namespace.setVariable("assistButton", assistButton, false);
+} catch (Exception e) {
+        tasker.log("AssistButton creation failed: " + e.getMessage());
+        a11Y.namespace.setVariable("assistButton", null, false);
+}
 
-This updateManager = UpdateManager();
-updateManager.namespace.setVariable("directoryPath", ENV, false);
-a11Y.namespace.setVariable("updateManager", updateManager, false);
+try {
+        This updateManager = UpdateManager();
+        updateManager.namespace.setVariable("directoryPath", ENV, false);
+        a11Y.namespace.setVariable("updateManager", updateManager, false);
+} catch (Exception e) {
+        tasker.log("UpdateManager creation failed: " + e.getMessage());
+}
 
-This packageManager = PackageManager();
-a11Y.namespace.setVariable("packageManager", packageManager, false);
+try {
+        This packageManager = PackageManager();
+        a11Y.namespace.setVariable("packageManager", packageManager, false);
+} catch (Exception e) {
+        tasker.log("PackageManager creation failed: " + e.getMessage());
+}
 
 tasker.sendCommand("a11Y=:=start");
