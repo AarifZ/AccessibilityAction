@@ -9,7 +9,14 @@ import android.view.WindowManager;
 Context getContext(int overlayType) {
 	Context myContext;
 	if (overlayType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
-		myContext = getService();
+		Object svc = getService();
+		if (svc != null && svc != void) {
+			myContext = (Context) svc;
+		} else {
+			// Service unavailable - fall back to regular context
+			// Caller should use TYPE_APPLICATION_OVERLAY in this case
+			myContext = context;
+		}
 	} else {
 		myContext = context;
 	}
@@ -32,7 +39,13 @@ Context getContext() {
 
 Context getContext(boolean useAccessibilityService) {
 	if (useAccessibilityService) {
-		return getContext(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY);
+		// Check if service is actually available
+		Object svc = getService();
+		if (svc != null && svc != void) {
+			return getContext(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY);
+		}
+		// Service not available, use application overlay instead
+		return getContext(0);
 	} else {
 		return getContext(0);
 	}
