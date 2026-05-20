@@ -244,15 +244,41 @@ a11Y() {
 String ENV = new File(getSourceFileInfo()).getParentFile().getAbsolutePath();
 This a11Y = a11Y();
 a11Y.setEnv(ENV);
-a11Y.set();
-This inspector = MethodInspector(this);
-inspector.read();
-a11Y.inspector = inspector;
+
+/* CRITICAL: Register a11Y Java variable IMMEDIATELY so it's always available
+   even if subsequent initialization steps fail. In kid apps (App Factory exports),
+   a11Y.set() may fail because some .bsh files reference classes not bundled
+   in the kid APK. By registering a11Y first, showAssist() etc. can at least
+   find the variable and report meaningful errors instead of "undefined". */
 tasker.setJavaVariable("a11Y", a11Y);
 
-This a11E = a11E();
-tasker.setJavaVariable("a11E", a11E);
+/* Import all scripts (loads .bsh files via import.java).
+   This is the step most likely to fail in kid apps if a .bsh file references
+   an unavailable class. If it fails, log the error but continue. */
+try {
+        a11Y.set();
+} catch (Exception e) {
+        tasker.log("a11Y.set() failed: " + e.getMessage());
+}
 
+/* MethodInspector - optional, non-critical for core functionality */
+try {
+        This inspector = MethodInspector(this);
+        inspector.read();
+        a11Y.inspector = inspector;
+} catch (Exception e) {
+        tasker.log("MethodInspector creation failed: " + e.getMessage());
+}
+
+/* Event listener - needed for event-based features */
+try {
+        This a11E = a11E();
+        tasker.setJavaVariable("a11E", a11E);
+} catch (Exception e) {
+        tasker.log("a11E creation failed: " + e.getMessage());
+}
+
+/* Assist button - the main overlay UI. Uses fallback when Material is unavailable. */
 try {
         This assistButton = AssistButton(0.8, 0.8);
         if (assistButton == null) {
@@ -264,6 +290,7 @@ try {
         a11Y.namespace.setVariable("assistButton", null, false);
 }
 
+/* Update manager - for downloading updates, non-critical at startup */
 try {
         This updateManager = UpdateManager();
         updateManager.namespace.setVariable("directoryPath", ENV, false);
@@ -272,6 +299,7 @@ try {
         tasker.log("UpdateManager creation failed: " + e.getMessage());
 }
 
+/* Package manager - for app info, non-critical at startup */
 try {
         This packageManager = PackageManager();
         a11Y.namespace.setVariable("packageManager", packageManager, false);
@@ -279,4 +307,17 @@ try {
         tasker.log("PackageManager creation failed: " + e.getMessage());
 }
 
-tasker.sendCommand("a11Y=:=start");
+try {
+        tasker.sendCommand("a11Y=:=start");
+} catch (Exception e) {
+        tasker.log("sendCommand failed: " + e.getMessage());
+}
+
+/* Diagnostic: report initialization status */
+try {
+        String status = "a11Y ready";
+        if (a11Y.namespace.getVariable("assistButton") == null) {
+                status = "a11Y ready (no assist button)";
+        }
+        tasker.showToast(status);
+} catch (Exception e) {}
