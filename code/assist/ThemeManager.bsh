@@ -200,13 +200,38 @@ ThemeManager(Context ctx) {
 		return tv;
 	}
 
-
 	int color(String id) {
 		Context useCtx = getWrapperContext();
 		Resources res = useCtx.getResources();
 		int resId = res.getIdentifier(id, "color", "android");
 		int colorInt = res.getColor(resId);
 		return colorInt;
+	}
+
+	int color(String attrName, boolean useFallback) {
+		if (useFallback) {
+			This a11Y = tasker.getJavaVariable("a11Y");
+			return a11Y.materialColorFallback.color(attrName);
+		}
+		
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int attrId = res.getIdentifier(attrName, "attr", useCtx.getPackageName());
+		if (attrId == 0) {
+			attrId = res.getIdentifier(attrName, "attr", "com.google.android.material");
+		}
+		TypedValue tv = new TypedValue();
+		boolean found = useCtx.getTheme().resolveAttribute(attrId, tv, true);
+		if (!found) return 0;
+		if (tv.isColorType()) {
+			return tv.data;
+		} else {
+			return 0;
+		}
+	}
+
+	int color(String attrName) {
+		return color(attrName, useColorFallback != void ? useColorFallback : false);
 	}
 
 	setAlpha(int color, int alpha) {
