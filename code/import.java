@@ -4,22 +4,15 @@ String LOG_FILE = MAIN_DIRECTORY + "/log.txt";
 long LONG_CLICK_DURATION = 500;
 cd(MAIN_DIRECTORY);
 addClassPath(".");
-
-/* Load each module directory independently.
-   In kid apps (App Factory exports), some modules may reference classes
-   that aren't bundled. By wrapping each importCommands call, we ensure
-   that a failure in one module doesn't prevent others from loading. */
-try { importCommands("main"); } catch (Exception e) { tasker.log("importCommands main failed: " + e.getMessage()); }
-try { importCommands("gestures"); } catch (Exception e) { tasker.log("importCommands gestures failed: " + e.getMessage()); }
-try { importCommands("actions"); } catch (Exception e) { tasker.log("importCommands actions failed: " + e.getMessage()); }
-try { importCommands("others"); } catch (Exception e) { tasker.log("importCommands others failed: " + e.getMessage()); }
-try { importCommands("assist"); } catch (Exception e) { tasker.log("importCommands assist failed: " + e.getMessage()); }
-try { importCommands("lib"); } catch (Exception e) { tasker.log("importCommands lib failed: " + e.getMessage()); }
-try { importCommands("event"); } catch (Exception e) { tasker.log("importCommands event failed: " + e.getMessage()); }
-
-try { source("others/globalAction.java"); } catch (Exception e) { tasker.log("globalAction.java failed: " + e.getMessage()); }
-
-try { String RUNNING_ENV = checkEnv(); } catch (Exception e) { tasker.log("checkEnv failed: " + e.getMessage()); }
+importCommands("main");
+importCommands("gestures");
+importCommands("actions");
+importCommands("others");
+importCommands("assist");
+importCommands("lib");
+importCommands("event");
+source("others/globalAction.java");
+String RUNNING_ENV = checkEnv();
 import android.view.accessibility.*;
 if (debugMe == void) debugMe = false;
 if (debugDelay == void) debugDelay = 1000;

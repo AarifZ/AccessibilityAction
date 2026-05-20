@@ -30,453 +30,452 @@ import android.view.ViewParent;
 
 
 /*────────────────────────────────────────────────────────────────
-	StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y)
-	Custom class to manage the structure of given root node.
+        StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y)
+        Custom class to manage the structure of given root node.
 
-	Parameters:
-		- AccessibilityNodeInfo rootNode, root node of the screen
-		- boolean useA11y, use accessibility service or not
-	
-	Returns:
-		bsh.This StructureOverlay
-	
-	Methods:
-		- remove() removes the structure overlay
-		- show() displays the structure overlay
-		- createNodeList() creates list of node boxes
-		- isRemoved() returns true if the structure overlay is removed
-		- hideNode(AccessibilityNodeInfo node) hides the node
-		- hideBox(This nodeBox) hides the node box view
-		- highlightNode(AccessibilityNodeInfo node) highlights the node
-		- addHistory(This nodeBox) adds the node box to history
-		- highlightNodes(List nodes) highlights the nodes in the list
-		
-	Notes:
-		- All highlight nodes will soon to be deprecated. Replaced with NodesFinder which is improved version of SimilarNodes
+        Parameters:
+                - AccessibilityNodeInfo rootNode, root node of the screen
+                - boolean useA11y, use accessibility service or not
+        
+        Returns:
+                bsh.This StructureOverlay
+        
+        Methods:
+                - remove() removes the structure overlay
+                - show() displays the structure overlay
+                - createNodeList() creates list of node boxes
+                - isRemoved() returns true if the structure overlay is removed
+                - hideNode(AccessibilityNodeInfo node) hides the node
+                - hideBox(This nodeBox) hides the node box view
+                - highlightNode(AccessibilityNodeInfo node) highlights the node
+                - addHistory(This nodeBox) adds the node box to history
+                - highlightNodes(List nodes) highlights the nodes in the list
+                
+        Notes:
+                - All highlight nodes will soon to be deprecated. Replaced with NodesFinder which is improved version of SimilarNodes
 
 ──────────────────────────────────────────────────────────────── */
 StructureOverlay(AccessibilityNodeInfo rootNode, boolean useA11y) {
-	This TOP = this;
-	This a11Y = tasker.getJavaVariable("a11Y");
-	boolean isRemoved;
-	boolean isShown;
-	boolean nodeBoxTouchable = true;
-	final ArrayList nodeList = new ArrayList();
-	boolean smallestFirst = true;
-	AccessibilityNodeInfo activeNode;
-	This activeBox;
-	This activeSimilar;
-	List searchHighlightNodes;
-	This listener;
-	Map nodeBoxMap = new HashMap();
-	List highlighted = new ArrayList();
-	List hiddenBoxes = new ArrayList();
-	List boxHistory = new ArrayList();
+        This TOP = this;
+        This a11Y = tasker.getJavaVariable("a11Y");
+        boolean isRemoved;
+        boolean isShown;
+        boolean nodeBoxTouchable = true;
+        final ArrayList nodeList = new ArrayList();
+        boolean smallestFirst = true;
+        AccessibilityNodeInfo activeNode;
+        This activeBox;
+        This activeSimilar;
+        List searchHighlightNodes;
+        This listener;
+        Map nodeBoxMap = new HashMap();
+        List highlighted = new ArrayList();
+        List hiddenBoxes = new ArrayList();
+        List boxHistory = new ArrayList();
 
-	final Object accessibilityService = getService();
-	if (accessibilityService == null) {
-		/* Use safe error reporting instead of JavaCodeException which may not be available */
-		tasker.showToast("Accessibility Service not running.");
-		return null;
-	}
+        /* Check service availability - getContext() handles null gracefully now */
+        Object accessibilityService = getService();
+        boolean hasService = (accessibilityService != null && accessibilityService != void);
 
-	Context overlayContext = getContext(useA11y);
-	final WindowManager windowManager = (WindowManager) overlayContext.getSystemService(Context.WINDOW_SERVICE);
-	Handler mainHandler = new Handler(Looper.getMainLooper());
+        /* If no service, fall back to non-a11y overlay */
+        boolean effectiveUseA11y = hasService && useA11y;
+        Context overlayContext = getContext(effectiveUseA11y);
+        final WindowManager windowManager = (WindowManager) overlayContext.getSystemService(Context.WINDOW_SERVICE);
+        Handler mainHandler = new Handler(Looper.getMainLooper());
 
-	int overlayType = useA11y ?
-		WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY :
-		WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        int overlayType = effectiveUseA11y ?
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY :
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
 
-	/* ThemeManager with fallback */
-	This tm = null;
-	try {
-		tm = ThemeManager(overlayContext);
-		tm.setThemeDark();
-	} catch (Exception e) {
-		tasker.log("ThemeManager unavailable for StructureOverlay, using defaults");
-	}
+        /* ThemeManager with fallback */
+        This tm = null;
+        try {
+                tm = ThemeManager(overlayContext);
+                tm.setThemeDark();
+        } catch (Exception e) {
+                tasker.log("ThemeManager unavailable for StructureOverlay, using defaults");
+        }
 
-	setAlpha(int color, int alpha) {
-		return (alpha << 24) | (color & 0x00ffffff);
-	}
+        setAlpha(int color, int alpha) {
+                return (alpha << 24) | (color & 0x00ffffff);
+        }
 
-	final FrameLayout rootLayout = new FrameLayout(overlayContext);
-	WindowManager.LayoutParams rootParams = new WindowManager.LayoutParams(
-		WindowManager.LayoutParams.MATCH_PARENT,
-		WindowManager.LayoutParams.MATCH_PARENT,
-		overlayType,
-		WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-		PixelFormat.TRANSLUCENT
-	);
+        final FrameLayout rootLayout = new FrameLayout(overlayContext);
+        WindowManager.LayoutParams rootParams = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                overlayType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+        );
 
-	rootParams.gravity = Gravity.TOP | Gravity.LEFT;
+        rootParams.gravity = Gravity.TOP | Gravity.LEFT;
 
-	removeView(View view) {
-		ViewParent parent = view.getParent();
-		if (parent == null || !(parent instanceof ViewGroup)) {
-			return;
-		}
-		((ViewGroup) parent).removeView(view);
-	}
+        removeView(View view) {
+                ViewParent parent = view.getParent();
+                if (parent == null || !(parent instanceof ViewGroup)) {
+                        return;
+                }
+                ((ViewGroup) parent).removeView(view);
+        }
 
-	remove() {
-		try {
-			if (activeBox != null) activeBox.reset();
-		} catch (Exception e) {}
-		try {
-			windowManager.removeView(rootLayout);
-		} catch (Exception e) {}
-	}
+        remove() {
+                try {
+                        if (activeBox != null) activeBox.reset();
+                } catch (Exception e) {}
+                try {
+                        windowManager.removeView(rootLayout);
+                } catch (Exception e) {}
+        }
 
-	rootLayout.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-		public void onViewAttachedToWindow(View view) {
-			isRemoved = false;
-			isShown = true;
-			try {
-				if (tasker.getJavaVariable("structureOverlay") != null) structureOverlay.remove();
-				tasker.setJavaVariable("structureOverlay", TOP);
-				a11Y.addOverlay(this);
-			} catch (Exception e) {}
-		}
+        rootLayout.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                public void onViewAttachedToWindow(View view) {
+                        isRemoved = false;
+                        isShown = true;
+                        try {
+                                if (tasker.getJavaVariable("structureOverlay") != null) structureOverlay.remove();
+                                tasker.setJavaVariable("structureOverlay", TOP);
+                                a11Y.addOverlay(this);
+                        } catch (Exception e) {}
+                }
 
-		public void onViewDetachedFromWindow(View view) {
-			isRemoved = true;
-			isShown = false;
-			try {
-				tasker.setJavaVariable("structureOverlay", null);
-				a11Y.removeOverlay(this);
-			} catch (Exception e) {}
-		}
-	});
-
+                public void onViewDetachedFromWindow(View view) {
+                        isRemoved = true;
+                        isShown = false;
+                        try {
+                                tasker.setJavaVariable("structureOverlay", null);
+                                a11Y.removeOverlay(this);
+                        } catch (Exception e) {}
+                }
+        });
 
 
-	isRemoved() {
-		return isRemoved;
-	}
 
-	post(Runnable run) {
-		mainHandler.post(run);
-	}
+        isRemoved() {
+                return isRemoved;
+        }
 
-
-	/* External API to highlight specific nodes via color. */
-	highlightNode(AccessibilityNodeInfo targetNode, int strokeColor, int fillColor) {
-		This nodeBox = nodeBoxMap.get(targetNode);
-		if (nodeBox == null) return null;
-		nodeBox.setColor(4, strokeColor, fillColor);
-		reset() {
-			nodeBox.reset();
-		}
-		return this;
-	}
-
-	highlightNodes(List nodes, int strokeColor, int fillColor) {
-		ArrayList highlights = new ArrayList();
-		for (int i = 0; i < nodes.size(); i++) {
-			AccessibilityNodeInfo targetNode = (AccessibilityNodeInfo) nodes.get(i);
-			if (activeBox == null && targetNode.equals(activeBox.node)) continue;
-			This highlight = highlightNode(targetNode, strokeColor, fillColor);
-			highlights.add(highlight);
-		}
-		reset() {
-			if (highlights.isEmpty()) return;
-			for (This highlight: highlights) {
-				if (highlight != null) highlight.reset();
-			}
-		}
-		return this;
-	}
-
-	hideBox(This nodeBox) {
-		nodeBox.hide();
-		unhide() {
-			nodeBox.unhide();
-			nodeBox.reset();
-		}
-		hiddenBoxes.add(this);
-	}
-
-	/* External API to highlight specific nodes via color. */
-	hideNode(AccessibilityNodeInfo targetNode) {
-		This nodeBox = (View) nodeBoxMap.get(targetNode);
-		if (nodeBox == null) continue;
-		return hideBox(nodeBox);
-	}
-
-	unhideBoxes() {
-		if (hiddenBoxes.isEmpty()) return;
-		for (This hidden: hiddenBoxes) {
-			try {
-				hidden.unhide();
-			} catch (Exception e) {}
-		}
-		hiddenBoxes.clear();
-	}
-
-	activeHighlight(This nodeBox) {
-		if (activeBox != null) activeBox.reset();
-		activeBox = this;
-		AccessibilityNodeInfo node = nodeBox.node;
-		int fillColor = 0;
-		int strokeColor = 0;
-		try {
-			fillColor = setAlpha(tm.attr("colorPrimary"), 150);
-			strokeColor = tm.attr("colorPrimary");
-		} catch (Exception e) {
-			fillColor = setAlpha(Color.parseColor("#6200EA"), 150);
-			strokeColor = Color.parseColor("#6200EA");
-		}
-		nodeBox.setColor(5, strokeColor, fillColor);
-		nodeBox.showInfo();
-
-		try {
-			activeSimilar = SimilarNodes(rootNode, nodeBoxMap, nodeBox);
-			activeSimilar.highlightAll();
-			String similarText = activeSimilar.getSimilarText();
-			if (similarText != null) nodeBox.infoToast.addRow("similar", "Similar", similarText);
-		} catch (Exception e) {
-			tasker.log("SimilarNodes error: " + e.getMessage());
-		}
-
-		reset() {
-			activeBox = null;
-			nodeBox.reset();
-			try {
-				if (activeSimilar != null) activeSimilar.reset();
-			} catch (Exception e) {}
-		}
-		return this;
-	}
-
-	addHistory(This nodeBox) {
-		if (nodeBox == null) return;
-		if (!boxHistory.isEmpty()) {
-			if (boxHistory.getLast() == nodeBox) return;
-		}
-		boxHistory.add(0, nodeBox);
-	}
-
-	getDefaultListener() {
-		onSingleTapConfirmed(This nodeBox) {
-			addHistory(nodeBox);
-			if (activeBox != null && activeBox.node.equals(nodeBox.node)) {
-				//				removeHelper();
-				activeBox.reset();
-			} else {
-				//				removeHelper();
-				if (activeBox != null) activeBox.reset();
-				activeHighlight(nodeBox);
-			}
-			return true;
-		}
-
-		onSingleTapUp(This nodeBox) {
-			return true;
-		}
-
-		onDoubleTap(This nodeBox) {
-			addHistory(nodeBox);
-			showToast("Clean Leftover");
-			a11Y.clean();
-			return true;
-		}
-
-		onFling(This nodeBox) {
-			try { vibrate(nodeBox.view); } catch (Exception e) {}
-			addHistory(nodeBox);
-			hideBox(nodeBox);
-			return true;
-		}
-
-		onLongPress(This nodeBox) {
-			try { vibrate(nodeBox.view); } catch (Exception e) {}
-			addHistory(nodeBox);
-			if (tasker.getJavaVariable("a11Y").quickAddMode) {
-				remove();
-				This nodeData = SimilarNodes(rootNode, nodeBoxMap, nodeBox);
-				tasker.setJavaVariable("nodeData", nodeData);
-				a11Y.executor.submit(new Runnable() {
-					run() {
-						tasker.getJavaVariable("a11Y").set();
-						Map result = ActionPicker(nodeData);
-						if (result != null) {
-							a11Y.selectedAction = result;
-						}
-					}
-				});
-			} else {
-				activeHighlight(nodeBox);
-				nodeBox.showDialog();
-			}
-
-		}
-		return this;
-	}
+        post(Runnable run) {
+                mainHandler.post(run);
+        }
 
 
-	createNodeList() {
-		ArrayList stack = new ArrayList();
-		if (listener == null) listener = getDefaultListener();
-		// Stack will be pair of node and their depth
-		stack.add(new Object[] { rootNode, 0 });
-		while (!stack.isEmpty()) {
-			Object[] item = (Object[]) stack.remove(0);
-			AccessibilityNodeInfo node = (AccessibilityNodeInfo) item[0];
-			int depth = (int) item[1];
+        /* External API to highlight specific nodes via color. */
+        highlightNode(AccessibilityNodeInfo targetNode, int strokeColor, int fillColor) {
+                This nodeBox = nodeBoxMap.get(targetNode);
+                if (nodeBox == null) return null;
+                nodeBox.setColor(4, strokeColor, fillColor);
+                reset() {
+                        nodeBox.reset();
+                }
+                return this;
+        }
 
-			if (node == null) continue;
+        highlightNodes(List nodes, int strokeColor, int fillColor) {
+                ArrayList highlights = new ArrayList();
+                for (int i = 0; i < nodes.size(); i++) {
+                        AccessibilityNodeInfo targetNode = (AccessibilityNodeInfo) nodes.get(i);
+                        if (activeBox == null && targetNode.equals(activeBox.node)) continue;
+                        This highlight = highlightNode(targetNode, strokeColor, fillColor);
+                        highlights.add(highlight);
+                }
+                reset() {
+                        if (highlights.isEmpty()) return;
+                        for (This highlight: highlights) {
+                                if (highlight != null) highlight.reset();
+                        }
+                }
+                return this;
+        }
 
-			Rect bounds = new Rect();
-			node.getBoundsInScreen(bounds);
+        hideBox(This nodeBox) {
+                nodeBox.hide();
+                unhide() {
+                        nodeBox.unhide();
+                        nodeBox.reset();
+                }
+                hiddenBoxes.add(this);
+        }
 
-			if (!bounds.isEmpty() && bounds.width() > 2 && bounds.height() > 2) {
-				int area = bounds.width() * bounds.height();
-				try {
-					This nodeBox = NodeBox(overlayContext, overlayType, node);
-					nodeBox.setGestureListener(listener);
-					nodeBox.setTouchable(nodeBoxTouchable);
-					nodeList.add(new Object[] { depth, area, nodeBox });
-					nodeBoxMap.put(node, nodeBox);
-				} catch (Exception e) {
-					tasker.log("NodeBox creation failed: " + e.getMessage());
-				}
-			}
-			for (int i = 0; i < node.getChildCount(); i++) {
-				AccessibilityNodeInfo child = node.getChild(i);
-				if (child != null) stack.add(new Object[] { child, depth + 1 });
-			}
-		}
+        /* External API to highlight specific nodes via color. */
+        hideNode(AccessibilityNodeInfo targetNode) {
+                This nodeBox = (View) nodeBoxMap.get(targetNode);
+                if (nodeBox == null) continue;
+                return hideBox(nodeBox);
+        }
 
-		// Sorting 
-		Collections.sort(nodeList, new Comparator() {
-			public int compare(Object a, Object b) {
-				Object[] nodeA = (Object[]) a;
-				Object[] nodeB = (Object[]) b;
-				if (smallestFirst) {
-					int areaA = (int) nodeA[1];
-					int areaB = (int) nodeB[1];
-					return areaB - areaA; // small on top
-				} else {
-					int depthA = (int) nodeA[0];
-					int depthB = (int) nodeB[0];
-					return depthA - depthB; // depth mode
-				}
-			}
-		});
-	}
+        unhideBoxes() {
+                if (hiddenBoxes.isEmpty()) return;
+                for (This hidden: hiddenBoxes) {
+                        try {
+                                hidden.unhide();
+                        } catch (Exception e) {}
+                }
+                hiddenBoxes.clear();
+        }
 
-	show() {
-		if (nodeList.isEmpty()) createNodeList();
-		windowManager.addView(rootLayout, rootParams);
-		Runnable showRun = new Runnable() {
-			run() {
-				try {
-					int[] loc = new int[2];
-					rootLayout.getLocationOnScreen(loc);
-					for (int i = 0; i < nodeList.size(); i++) {
-						Object[] wrap = nodeList.get(i);
-						This nodeBox = wrap[2];
-						nodeBox.addViewTo(rootLayout);
-					}
-				} catch (Exception e) {
-					tasker.log("Show error: " + e.getMessage());
-				}
-			}
-		};
-		post(showRun);
-	}
+        activeHighlight(This nodeBox) {
+                if (activeBox != null) activeBox.reset();
+                activeBox = this;
+                AccessibilityNodeInfo node = nodeBox.node;
+                int fillColor = 0;
+                int strokeColor = 0;
+                try {
+                        fillColor = setAlpha(tm.attr("colorPrimary"), 150);
+                        strokeColor = tm.attr("colorPrimary");
+                } catch (Exception e) {
+                        fillColor = setAlpha(Color.parseColor("#6200EA"), 150);
+                        strokeColor = Color.parseColor("#6200EA");
+                }
+                nodeBox.setColor(5, strokeColor, fillColor);
+                nodeBox.showInfo();
 
-	show(List nodes) {
-		if (nodes.isEmpty()) {
-			tasker.showToast("Not found");
-			return;
-		}
-		if (listener == null) listener = getDefaultListener();
-		Runnable showRun = new Runnable() {
-			run() {
-				try {
-					windowManager.addView(rootLayout, rootParams);
-					int[] loc = new int[2];
-					rootLayout.getLocationOnScreen(loc);
-					for (Object nodeItem: nodes) {
-						if (nodeItem instanceof This) {
-							This nodeBox = nodeItem;
-							nodeBox.setGestureListener(listener);
-							nodeBox.setTouchable(nodeBoxTouchable);
-							nodeBox.addViewTo(rootLayout);
-							nodeBoxMap.put(nodeBox.node, nodeBox);
-						} else if (nodeItem instanceof AccessibilityNodeInfo) {
-							AccessibilityNodeInfo node = nodeItem;
-							This nodeBox = NodeBox(overlayContext, overlayType, node);
-							nodeBox.setGestureListener(listener);
-							nodeBox.setTouchable(nodeBoxTouchable);
-							nodeBox.addViewTo(rootLayout);
-							nodeBoxMap.put(node, nodeBox);
-						}
+                try {
+                        activeSimilar = SimilarNodes(rootNode, nodeBoxMap, nodeBox);
+                        activeSimilar.highlightAll();
+                        String similarText = activeSimilar.getSimilarText();
+                        if (similarText != null) nodeBox.infoToast.addRow("similar", "Similar", similarText);
+                } catch (Exception e) {
+                        tasker.log("SimilarNodes error: " + e.getMessage());
+                }
 
-					}
-				} catch (Exception e) {
-					tasker.log("List show error: " + e.getMessage());
-				}
-			}
-		};
-		post(showRun);
-	}
+                reset() {
+                        activeBox = null;
+                        nodeBox.reset();
+                        try {
+                                if (activeSimilar != null) activeSimilar.reset();
+                        } catch (Exception e) {}
+                }
+                return this;
+        }
 
-	show(String key, String value) {
-		List nodes = findNodes(key, value);
-		show(nodes);
-	}
+        addHistory(This nodeBox) {
+                if (nodeBox == null) return;
+                if (!boxHistory.isEmpty()) {
+                        if (boxHistory.getLast() == nodeBox) return;
+                }
+                boxHistory.add(0, nodeBox);
+        }
 
-	showText() {
-		List nodes = findNodes("regex", ".");
-		show(nodes);
-	}
+        getDefaultListener() {
+                onSingleTapConfirmed(This nodeBox) {
+                        addHistory(nodeBox);
+                        if (activeBox != null && activeBox.node.equals(nodeBox.node)) {
+                                //                              removeHelper();
+                                activeBox.reset();
+                        } else {
+                                //                              removeHelper();
+                                if (activeBox != null) activeBox.reset();
+                                activeHighlight(nodeBox);
+                        }
+                        return true;
+                }
 
-	setListener(This newListener) {
-		listener = newListener;
-	}
+                onSingleTapUp(This nodeBox) {
+                        return true;
+                }
 
-	setDefaultListener() {
-		listener = getDefaultListener();
-	}
+                onDoubleTap(This nodeBox) {
+                        addHistory(nodeBox);
+                        showToast("Clean Leftover");
+                        a11Y.clean();
+                        return true;
+                }
 
-	setNodeBoxTouchable(boolean touchable) {
-		nodeBoxTouchable = touchable;
-	}
+                onFling(This nodeBox) {
+                        try { vibrate(nodeBox.view); } catch (Exception e) {}
+                        addHistory(nodeBox);
+                        hideBox(nodeBox);
+                        return true;
+                }
 
-	setTouchable(boolean touchable) {
-		WindowManager.LayoutParams currentParams = (WindowManager.LayoutParams) rootLayout.getLayoutParams();
-		if (currentParams == null) currentParams = rootParams;
+                onLongPress(This nodeBox) {
+                        try { vibrate(nodeBox.view); } catch (Exception e) {}
+                        addHistory(nodeBox);
+                        if (tasker.getJavaVariable("a11Y").quickAddMode) {
+                                remove();
+                                This nodeData = SimilarNodes(rootNode, nodeBoxMap, nodeBox);
+                                tasker.setJavaVariable("nodeData", nodeData);
+                                a11Y.executor.submit(new Runnable() {
+                                        run() {
+                                                tasker.getJavaVariable("a11Y").set();
+                                                Map result = ActionPicker(nodeData);
+                                                if (result != null) {
+                                                        a11Y.selectedAction = result;
+                                                }
+                                        }
+                                });
+                        } else {
+                                activeHighlight(nodeBox);
+                                nodeBox.showDialog();
+                        }
 
-		int NOT_TOUCHABLE = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                }
+                return this;
+        }
 
-		if (touchable) {
-			currentParams.flags &= ~NOT_TOUCHABLE;
-		} else {
-			currentParams.flags |= NOT_TOUCHABLE;
-		}
 
-		rootParams = currentParams;
-		if (isShown && !isRemoved) {
-			/* Use the instance windowManager and the updated params */
-			windowManager.updateViewLayout(rootLayout, rootParams);
-		}
-	}
+        createNodeList() {
+                ArrayList stack = new ArrayList();
+                if (listener == null) listener = getDefaultListener();
+                // Stack will be pair of node and their depth
+                stack.add(new Object[] { rootNode, 0 });
+                while (!stack.isEmpty()) {
+                        Object[] item = (Object[]) stack.remove(0);
+                        AccessibilityNodeInfo node = (AccessibilityNodeInfo) item[0];
+                        int depth = (int) item[1];
 
-	return this;
+                        if (node == null) continue;
+
+                        Rect bounds = new Rect();
+                        node.getBoundsInScreen(bounds);
+
+                        if (!bounds.isEmpty() && bounds.width() > 2 && bounds.height() > 2) {
+                                int area = bounds.width() * bounds.height();
+                                try {
+                                        This nodeBox = NodeBox(overlayContext, overlayType, node);
+                                        nodeBox.setGestureListener(listener);
+                                        nodeBox.setTouchable(nodeBoxTouchable);
+                                        nodeList.add(new Object[] { depth, area, nodeBox });
+                                        nodeBoxMap.put(node, nodeBox);
+                                } catch (Exception e) {
+                                        tasker.log("NodeBox creation failed: " + e.getMessage());
+                                }
+                        }
+                        for (int i = 0; i < node.getChildCount(); i++) {
+                                AccessibilityNodeInfo child = node.getChild(i);
+                                if (child != null) stack.add(new Object[] { child, depth + 1 });
+                        }
+                }
+
+                // Sorting 
+                Collections.sort(nodeList, new Comparator() {
+                        public int compare(Object a, Object b) {
+                                Object[] nodeA = (Object[]) a;
+                                Object[] nodeB = (Object[]) b;
+                                if (smallestFirst) {
+                                        int areaA = (int) nodeA[1];
+                                        int areaB = (int) nodeB[1];
+                                        return areaB - areaA; // small on top
+                                } else {
+                                        int depthA = (int) nodeA[0];
+                                        int depthB = (int) nodeB[0];
+                                        return depthA - depthB; // depth mode
+                                }
+                        }
+                });
+        }
+
+        show() {
+                if (nodeList.isEmpty()) createNodeList();
+                windowManager.addView(rootLayout, rootParams);
+                Runnable showRun = new Runnable() {
+                        run() {
+                                try {
+                                        int[] loc = new int[2];
+                                        rootLayout.getLocationOnScreen(loc);
+                                        for (int i = 0; i < nodeList.size(); i++) {
+                                                Object[] wrap = nodeList.get(i);
+                                                This nodeBox = wrap[2];
+                                                nodeBox.addViewTo(rootLayout);
+                                        }
+                                } catch (Exception e) {
+                                        tasker.log("Show error: " + e.getMessage());
+                                }
+                        }
+                };
+                post(showRun);
+        }
+
+        show(List nodes) {
+                if (nodes.isEmpty()) {
+                        tasker.showToast("Not found");
+                        return;
+                }
+                if (listener == null) listener = getDefaultListener();
+                Runnable showRun = new Runnable() {
+                        run() {
+                                try {
+                                        windowManager.addView(rootLayout, rootParams);
+                                        int[] loc = new int[2];
+                                        rootLayout.getLocationOnScreen(loc);
+                                        for (Object nodeItem: nodes) {
+                                                if (nodeItem instanceof This) {
+                                                        This nodeBox = nodeItem;
+                                                        nodeBox.setGestureListener(listener);
+                                                        nodeBox.setTouchable(nodeBoxTouchable);
+                                                        nodeBox.addViewTo(rootLayout);
+                                                        nodeBoxMap.put(nodeBox.node, nodeBox);
+                                                } else if (nodeItem instanceof AccessibilityNodeInfo) {
+                                                        AccessibilityNodeInfo node = nodeItem;
+                                                        This nodeBox = NodeBox(overlayContext, overlayType, node);
+                                                        nodeBox.setGestureListener(listener);
+                                                        nodeBox.setTouchable(nodeBoxTouchable);
+                                                        nodeBox.addViewTo(rootLayout);
+                                                        nodeBoxMap.put(node, nodeBox);
+                                                }
+
+                                        }
+                                } catch (Exception e) {
+                                        tasker.log("List show error: " + e.getMessage());
+                                }
+                        }
+                };
+                post(showRun);
+        }
+
+        show(String key, String value) {
+                List nodes = findNodes(key, value);
+                show(nodes);
+        }
+
+        showText() {
+                List nodes = findNodes("regex", ".");
+                show(nodes);
+        }
+
+        setListener(This newListener) {
+                listener = newListener;
+        }
+
+        setDefaultListener() {
+                listener = getDefaultListener();
+        }
+
+        setNodeBoxTouchable(boolean touchable) {
+                nodeBoxTouchable = touchable;
+        }
+
+        setTouchable(boolean touchable) {
+                WindowManager.LayoutParams currentParams = (WindowManager.LayoutParams) rootLayout.getLayoutParams();
+                if (currentParams == null) currentParams = rootParams;
+
+                int NOT_TOUCHABLE = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+
+                if (touchable) {
+                        currentParams.flags &= ~NOT_TOUCHABLE;
+                } else {
+                        currentParams.flags |= NOT_TOUCHABLE;
+                }
+
+                rootParams = currentParams;
+                if (isShown && !isRemoved) {
+                        /* Use the instance windowManager and the updated params */
+                        windowManager.updateViewLayout(rootLayout, rootParams);
+                }
+        }
+
+        return this;
 }
 StructureOverlay(boolean useA11y) {
-	AccessibilityNodeInfo rootNode = (AccessibilityNodeInfo) getRoot();
-	if (rootNode == null) {
-		tasker.showToast("Could not get root node.");
-		return null;
-	}
-	return StructureOverlay(rootNode, useA11y);
+        AccessibilityNodeInfo rootNode = (AccessibilityNodeInfo) getRoot();
+        if (rootNode == null) {
+                tasker.showToast("Could not get root node.");
+                return null;
+        }
+        return StructureOverlay(rootNode, useA11y);
 }
 
 StructureOverlay() {
-	return StructureOverlay(false);
+        return StructureOverlay(false);
 }

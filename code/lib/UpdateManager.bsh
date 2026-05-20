@@ -18,7 +18,11 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
-import com.joaomgcd.taskerm.action.java.JavaCodeException;
+try {
+        import com.joaomgcd.taskerm.action.java.JavaCodeException;
+} catch (Exception e) {
+        // JavaCodeException not available - running in exported app
+}
 import android.content.Context;
 import android.content.ClipboardManager;
 import android.content.ClipData;
@@ -78,7 +82,12 @@ UpdateManager() {
 
                 int responseCode = connection.getResponseCode();
                 if (responseCode < 200 || responseCode >= 300) {
-                        throw new JavaCodeException("HTTP Error (" + responseCode + "): " + connection.getResponseMessage());
+                        String errorMsg = "HTTP Error (" + responseCode + "): " + connection.getResponseMessage();
+                        try {
+                                throw new JavaCodeException(errorMsg);
+                        } catch (Exception e) {
+                                throw new Exception(errorMsg);
+                        }
                 }
                 return connection;
         }
