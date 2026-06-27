@@ -51,11 +51,20 @@ public This AssistButton(int initialX, int initialY) {
 		return null;
 	}
 
-	/* Check Material Design availability */
+	/* Check Material Design availability.
+	   App Factory/Kid App may contain Material classes but not a
+	   Theme.MaterialComponents app theme. Creating MaterialButton then throws
+	   IllegalArgumentException and aborts a11Y initialization, which leaves the
+	   global a11Y variable undefined for later Java Code actions. Keep Kid App
+	   on framework ImageButton UI unless a real MaterialComponents host is used. */
 	boolean useMaterial = false;
 	try {
-		Class.forName("com.google.android.material.button.MaterialButton");
-		useMaterial = true;
+		if (a11Y != null && a11Y.ENV != void && a11Y.ENV != null && a11Y.ENV.KID_APP) {
+			useMaterial = false;
+		} else {
+			Class.forName("com.google.android.material.button.MaterialButton");
+			useMaterial = true;
+		}
 	} catch (Exception e) {
 		useMaterial = false;
 	}
@@ -91,8 +100,13 @@ public This AssistButton(int initialX, int initialY) {
 			((com.google.android.material.button.MaterialButton) btn).setIconTint(ColorStateList.valueOf(iconColor));
 		} else {
 			/* For ImageButton fallback, adjust the background */
-			backgroundColor = isActive ? (int) tm.attr("colorPrimary") : (int) tm.attr("colorSurfaceContainerHighest");
-			iconColor = isActive ? (int) tm.attr("colorOnPrimary") : (int) tm.attr("colorOnSurface");
+			if (tm != null) {
+				backgroundColor = isActive ? (int) tm.attr("colorPrimary") : (int) tm.attr("colorSurfaceContainerHighest");
+				iconColor = isActive ? (int) tm.attr("colorOnPrimary") : (int) tm.attr("colorOnSurface");
+			} else {
+				backgroundColor = isActive ? Color.parseColor("#3F51B5") : Color.TRANSPARENT;
+				iconColor = Color.WHITE;
+			}
 			((View) btn).setBackgroundColor(backgroundColor);
 			if (btn instanceof ImageView) {
 				((ImageView) btn).setColorFilter(iconColor);
