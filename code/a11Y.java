@@ -1,51 +1,59 @@
+String ENV_PATH = new File(getSourceFileInfo()).getParentFile().getAbsolutePath();
+addClassPath(ENV_PATH);
+importCommands("lib");
+importCommands("lib.file");
+importCommands("main");
+LOG_FILE = ENV_PATH + "/log.txt";
+
 import bsh.This;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-
-
+import android.view.accessibility.AccessibilityNodeInfo;
+import java.lang.reflect.Field;
+import android.os.Handler;
+import android.os.Looper;
 
 a11Y() {
-	// 1. Retrieve the previous instance from Tasker's memory
+	// Retrieve the previous instance from Tasker's memory
 	This old = tasker.getJavaVariable("a11Y");
 	if (old != null) {
 		try {
-			if (old.executor != void && old.executor != null) {
-				if (!old.executor.isShutdown()) {
-					old.executor.shutdownNow();
-				}
+			boolean hasRemoveBoolean = old.namespace.getMethod("remove", new Class[] { Boolean.class } ) != null;
+			boolean hasRemove = old.namespace.getMethod("remove", new Class[] { } ) != null ;
+			if (hasRemoveBoolean) {
+				old.remove(false);
+			} else if (hasRemove) {
+				old.remove();
+			} else {
+				old.clean();
+				old.removeAssist();
+				old.removeEvents();
+				old.executor.shutdownNow();
 			}
-			old.removeAssist();
 		} catch (Exception e) {}
-		
 	}
 
-	boolean debugSteps = false;
-	boolean debugMe = false;
-	boolean debugInfo = true;
-	long findDelay = 100;
-	long debugDelay = 1000;
-	long stepDelay = 50;
-	long waitNodesTimeout = 10000;
+	final This TOP = this;
+
+	// Variables
 	List assistOverlays = new ArrayList();
-	String ENV;
-	This assistButton;
-	This updateManager;
-	boolean useOffset = true;
-	boolean useA11yOffset = true;
-	boolean waitNodes = true;
-	boolean useA11yStructure = false;
-	boolean includeAllMethods = false;
-	boolean quickAddMode = true;
-	boolean updatePreRelease = false;
+	This ENV;
+	String ENV_PATH;
+	String LOG_FILE;
 	long lastActionPickerReminder = 0;
-	long actionPickerReminderDelay = 120000;
-	This TOP;
+
+	This assistBar;
+	This updateManager;
+	This materialColorFallback;
+	This displayInfos;
 	String scriptEditor = "";
 	This inspector;
-	String LOG_FILE;
+	This NodeInfo;
+	This config;
+	Handler mainHandler = new Handler(Looper.getMainLooper());
 
 	ThreadFactory customThreadFactory = new ThreadFactory() {
 		private AtomicInteger count = new AtomicInteger(0);
@@ -70,9 +78,9 @@ a11Y() {
 		executor.execute(new Runnable() {
 			run() {
 				try {
-					if (ENV != null) source(ENV + "/a11Y.java");
+					if (ENV_PATH != null) source(ENV_PATH + "/a11Y.java");
 				} catch (e) {
-					tasker.logAndToast(e.getMessage(), LOG_FILE);
+					log(e.getMessage(), "ERROR");
 				}
 			}
 		});
@@ -83,32 +91,22 @@ a11Y() {
 	}
 
 	set(This THIS) {
-		THIS.namespace.setVariable("debugMe", debugMe, false);
-		THIS.namespace.setVariable("debugSteps", debugSteps, false);
-		THIS.namespace.setVariable("debugInfo", debugInfo, false);
-		THIS.namespace.setVariable("findDelay", findDelay, false);
-		THIS.namespace.setVariable("debugDelay", debugDelay, false);
-		THIS.namespace.setVariable("useOffset", useOffset, false);
-		THIS.namespace.setVariable("useA11yOffset", useA11yOffset, false);
-		THIS.namespace.setVariable("waitNodes", waitNodes, false);
-		THIS.namespace.setVariable("useA11yStructure", useA11yStructure, false);
-		THIS.namespace.setVariable("includeAllMethods", includeAllMethods, false);
-		THIS.namespace.setVariable("quickAddMode", quickAddMode, false);
-		THIS.namespace.setVariable("stepDelay", stepDelay, false);
-		THIS.namespace.setVariable("waitNodesTimeout", waitNodesTimeout, false);
-		if (ENV == null) {
+		config.setTo(TOP, THIS);
+		if (ENV != null) THIS.namespace.setVariable("ENV", ENV, false);
+		if (NodeInfo != null) THIS.namespace.setVariable("NodeInfo", NodeInfo, false);
+		if (ENV_PATH == null) {
 			String superImport = tasker.getVariable("ImportJava");
 			try {
 				this.interpreter.source(superImport);
 				THIS.invokeMethod("IMPORT", new Object[] { "AccessibilityAction" });
-				if (THIS.namespace.getVariable("MAIN_DIRECTORY") != null) ENV = THIS.namespace.getVariable("MAIN_DIRECTORY");
+				if (THIS.namespace.getVariable("MAIN_DIRECTORY") != null) ENV_PATH = THIS.namespace.getVariable("MAIN_DIRECTORY");
 				THIS.namespace.setVariable("a11Y", THIS, false);
 			} catch (e) {
-				tasker.showToast("Please set the folder with a11Y.setEnv(\"Directory path\")");
+				tasker.showToast("Please set the folder with a11Y.setEnvPath(\"Directory path\")");
 				return;
 			}
 		} else {
-			this.interpreter.source(ENV + "/import.java");
+			this.interpreter.source(ENV_PATH + "/import.java");
 		}
 		return THIS;
 	}
@@ -117,27 +115,22 @@ a11Y() {
 		set(this.caller);
 	}
 
-	setEnv(String path) {
-		ENV = path;
+	setEnvPath(String path) {
+		ENV_PATH = path;
 		LOG_FILE = path + "/log.txt";
 	}
 
+	setEnv(This env) {
+		ENV = env;
+	}
+
 	resetEnv() {
-		ENV = null;
+		ENV_PATH = null;
 	}
 
 	reset() {
-		debugSteps = false;
-		debugMe = false;
-		debugInfo = true;
-		findDelay = 100;
-		debugDelay = 1000;
-		useOffset = true;
-		useA11yOffset = true;
-		waitNodes = true;
-		useA11yStructure = false;
+		config.setTo(TOP);
 	}
-
 
 	addOverlay(This overlay) {
 		assistOverlays.add(overlay);
@@ -183,11 +176,11 @@ a11Y() {
 	}
 
 	showAssist() {
-		if (!assistButton.isShown) assistButton.show();
+		if (!assistBar.isShown) assistBar.show();
 	}
 
 	removeAssist() {
-		if (assistButton.isShown) assistButton.remove();
+		if (assistBar.isShown) assistBar.remove();
 	}
 
 	update() {
@@ -221,31 +214,144 @@ a11Y() {
 		a11E.unmute();
 	}
 
+	execute(Runnable postRun) {
+		executor.execute(postRun);
+	}
+
+	run(String fileName) {
+		Runnable runMe = new Runnable() {
+			run() {
+				try {
+					String scriptDirName = "/scripts";
+					String fullPath = ENV_PATH + scriptDirName;
+					File target = new File(fullPath, fileName);
+					if (!target.exists()) {
+						File directory = new File(fullPath);
+						File[] files = directory.listFiles();
+						if (files != null) {
+							for (File file: files) {
+								if (file.isFile()) {
+									if (file.getName().equals(fileName)) {
+										target = file;
+										break;
+									}
+								}
+							}
+						}
+					}
+					if (target.exists()) {
+						this.interpreter.source(target.getAbsolutePath());
+					} else {
+						log("File not found: " + fileName + " in " + scriptDirName, "ERROR");
+					}
+				} catch (Exception e) {
+					log(e.getMessage(), "ERROR");
+				}
+			}
+		};
+		execute(runMe);
+	}
+
+	testDisplay() {
+		if (displayInfos == null) {
+			set();
+			displayInfos = DisplayInfos();
+		}
+		displayInfos.show(6000);
+	}
+
+	post(Runnable run) {
+		mainHandler.post(run);
+	}
+
+	remove(boolean clearA11Y) {
+		log("Removing a11Y", TOP);
+		clean();
+		removeAssist();
+		removeEvents();
+		executor.shutdownNow();
+		tasker.setJavaVariable("a11E", null);
+		if (clearA11Y) tasker.setJavaVariable("a11Y", null);
+	}
+	
+	remove() {
+		remove(true);
+	}
+
+	checkService() {
+		return tasker.getAccessibilityService() != null;
+	}
+
+	enableService() {
+		if (a11yController == null) a11yController = A11yController();
+		String packageName = context.getPackageName();
+		a11yController.enableService(packageName);
+	}
+
+	disableService() {
+		if (a11yController == null) a11yController = A11yController();
+		String packageName = context.getPackageName();
+		a11yController.disableService(packageName);
+	}
+
 	long startTime = System.currentTimeMillis();
 	return this;
 
 };
 
-String ENV = new File(getSourceFileInfo()).getParentFile().getAbsolutePath();
+log("Initializing a11Y");
 This a11Y = a11Y();
+a11Y.setEnvPath(ENV_PATH);
+LOG_FILE = ENV_PATH + "/log.txt";
+
+This ENV = Environment();
 a11Y.setEnv(ENV);
+
+This viewControl = ViewControl();
+a11Y.namespace.setVariable("viewControl", viewControl, false);
+
+This config = Config(ENV_PATH + "/config.java");
+config.load();
+config.setTo(a11Y);
+
+a11Y.namespace.setVariable("config", config, false);
 a11Y.set();
+
 This inspector = MethodInspector(this);
 inspector.read();
 a11Y.inspector = inspector;
 tasker.setJavaVariable("a11Y", a11Y);
 
+This a11yController = A11yController();
+a11Y.namespace.setVariable("a11yController", a11yController, false);
+
 This a11E = a11E();
 tasker.setJavaVariable("a11E", a11E);
 
-This assistButton = AssistButton(0.8, 0.8);
-a11Y.namespace.setVariable("assistButton", assistButton, false);
+This NodeInfo = NodeInfo();
+a11Y.namespace.setVariable("NodeInfo", NodeInfo, false);
 
 This updateManager = UpdateManager();
-updateManager.namespace.setVariable("directoryPath", ENV, false);
+updateManager.namespace.setVariable("directoryPath", ENV_PATH, false);
 a11Y.namespace.setVariable("updateManager", updateManager, false);
 
 This packageManager = PackageManager();
 a11Y.namespace.setVariable("packageManager", packageManager, false);
 
+// Limit following methods and scripted objects to Tasker app
+if (!ENV.HAS_MATERIAL_LIB) {
+	tasker.showToast("Material library not found; using Android framework fallback UI where available.", "AccessibilityAction Kid App fallback");
+}
+
+This assistBar = AssistBar(0.8, 0.8);
+a11Y.namespace.setVariable("assistBar", assistBar, false);
+
+if (!ENV.HAS_MATERIAL_COLOR && ENV.HAS_MATERIAL_COLOR_FALLBACK) {
+	This mcf = MaterialColorFallback();
+	mcf.load();
+	log("Using fallback material color.");
+	tasker.showToast("Can't find material color via ThemeManager.color(String). Will try to use a fallback that doesn't match the theme.\n\nAccessibility actions still can be used.", "Assist & Debug features may not work.");
+}
+
+log("a11Y initialized and send start command");
 tasker.sendCommand("a11Y=:=start");

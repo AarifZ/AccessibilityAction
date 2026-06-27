@@ -55,10 +55,10 @@ public boolean gesture(Object[][] points, Paint paint) {
 	}
 
 	Context windowContext = getContext(true);
-	int targetDisplayId = windowContext.getDisplayId();
+	int targetDisplayId = windowContext.getDisplay().getDisplayId();
 
 	WindowManager windowManager = (WindowManager) windowContext.getSystemService(Context.WINDOW_SERVICE);
-	DisplayMetrics dm = getDisplayMetrics(windowContext.getDisplayId());
+	DisplayMetrics dm = getDisplayMetrics(targetDisplayId);
 	int screenWidth = dm.widthPixels;
 	int screenHeight = dm.heightPixels;
 
