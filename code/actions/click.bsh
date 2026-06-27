@@ -6,6 +6,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
 import android.graphics.Point;
+import bsh.This;
 /*───────────────────────────────────────────────────────────────
 click(...)
 **Performs Click Action**
@@ -28,33 +29,53 @@ Returns:
 
 /* Base Click Logic */
 click(AccessibilityNodeInfo node) {
-	if (node == null) return null;
+    if (node == null) return null;
+    boolean success;
+    AccessibilityNodeInfo firstNode = node;
+    
+    if (limitParentLevel == 0) {
+        /* Directly target the node without searching upward */
+        if (node != null) {
+            showOnScreen(node);
+            debugMe(node);
+            success = node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        }
+    } else {
+        /* Traverse up to find a clickable parent if the current node isn't */
+		log("Traversing up to find a clickable parent.");
+        while (node != null && !node.isClickable()) {
+            node = node.getParent();
+        }
 
+        if (node != null) {
+            showOnScreen(node);
+            debugMe(node);
+            success = node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        }
+    }
 
-	AccessibilityNodeInfo n = node;
-	/* Traverse up to find a clickable parent if the current node isn't */
-	while (node != null && !node.isClickable()) {
-		node = node.getParent();
-	}
+    if (!success) {
+        node = firstNode;
+        showOnScreen(node);
+        Point coor = getCoordinates(node);
+        debugMe(node);
+        success = tap(coor.x, coor.y);
+    } 
 
-	if (node == null && n.isEnabled()) {
-		node = n;
-		showOnScreen(node);
-		Point coor = getCoordinates(node);
-		debugMe(node);
-		tap(coor.x, coor.y);
-
-	} else if (node != null) {
-		showOnScreen(node);
-		debugMe(node);
-		node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-	}
-
-	if (stepDelay > 0) wait(stepDelay);
-	return node;
-
+    if (success) {
+        log("Click success.", node);
+        node.refresh();
+        if (stepDelay > 0) wait(stepDelay);
+        return node;
+    } else {
+        log("Click failed.", node);
+        return null;
+    }
 }
 
+click(This multiKeys) {
+	return click(getNode(multiKeys));
+}
 
 click(int x, int y) {
 	return tap(x, y);

@@ -1,6 +1,7 @@
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
+import bsh.This;
 
 /*───────────────────────────────────────────────────────────────
 select(...)
@@ -28,15 +29,19 @@ select(AccessibilityNodeInfo node) {
 	if (node == null) return null;
 
 	showOnScreen(node);
-	node.performAction(AccessibilityNodeInfo.ACTION_SELECT);
+	boolean success = node.performAction(AccessibilityNodeInfo.ACTION_SELECT);
 
 	if (stepDelay > 0) wait(stepDelay);
 
-	node.refresh();
+	if (success) node.refresh();
 	return node;
 }
 
 /* Collection Overloads */
+select(This multiKeys) {
+	return select(getNode(multiKeys));
+}
+
 select(ArrayList nodes) {
 	AccessibilityNodeInfo node = toNode(nodes);
 	return select(node);

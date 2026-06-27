@@ -54,12 +54,18 @@ DEBUG_COLOR = new Object[][] {
 	},
 	{
 		"similarClass",
+		1,
+		Color.GREEN,
+		Color.TRANSPARENT
+	},
+	{
+		"similarParent",
 		4,
 		Color.CYAN,
 		Color.TRANSPARENT
 	},
 	{
-		"similarParent",
+		"parent",
 		4,
 		Color.CYAN,
 		Color.TRANSPARENT

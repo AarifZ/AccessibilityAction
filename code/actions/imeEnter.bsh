@@ -1,6 +1,7 @@
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
+import bsh.This;
 
 /*─────────────────────────────────────────────────────────────── 
 This code was primarily generated using AI with minimal human editing.
@@ -25,28 +26,31 @@ imeEnter(AccessibilityNodeInfo node) {
 	if (node == null) return null;
 	showOnScreen(node);
 	debugMe(node);
-	node.performAction(0x00040000);
-	node.refresh();
+	boolean success = node.performAction(0x00040000);
+	if (success) node.refresh();
 	if (stepDelay > 0) wait(stepDelay);
-
 	return node;
+}
+
+imeEnter(This multiKeys) {
+	return imeEnter(getNode(multiKeys));
 }
 
 imeEnter(ArrayList nodes) {
 	AccessibilityNodeInfo node = toNode(nodes);
-	if (node == null) return;
+	if (node == null) return null;
 	return imeEnter(node);
 }
 
 imeEnter(HashMap nodesMap) {
 	AccessibilityNodeInfo node = toNode(nodesMap);
-	if (node == null) return;
+	if (node == null) return null;
 	return imeEnter(node);
 }
 
 imeEnter(HashMap nodesMap, String key) {
 	AccessibilityNodeInfo node = toNode(nodesMap, key);
-	if (node == null) return;
+	if (node == null) return null;
 	return imeEnter(node);
 }
 

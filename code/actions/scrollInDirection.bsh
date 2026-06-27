@@ -22,6 +22,7 @@ import android.os.Bundle;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import bsh.This;
 
 scrollInDirection(AccessibilityNodeInfo node, String direction) {
 	// interpret direction
@@ -35,14 +36,14 @@ scrollInDirection(AccessibilityNodeInfo node, String direction) {
 		else if (dir_str.equals("forward")) dir_value = View.FOCUS_FORWARD;
 		else if (dir_str.equals("backward")) dir_value = View.FOCUS_BACKWARD;
 		else {
-			tasker.log("invalid scroll direction: ", LOG_FILE);
-			return false;
+			log("invalid scroll direction: ");
+			return null;
 		}
 	} else if (direction instanceof Number) {
 		dir_value = ((Number) direction).intValue();
 	} else {
-		tasker.log("unsupported direction type: ", LOG_FILE);
-		return false;
+		log("unsupported direction type: ");
+		return null;
 	}
 
 	// climb up until scrollable node is found
@@ -54,8 +55,8 @@ scrollInDirection(AccessibilityNodeInfo node, String direction) {
 	}
 
 	if (scrollNode == null || !scrollNode.isScrollable()) {
-		tasker.log("No scrollable parent found for node: ", LOG_FILE);
-		return false;
+		log("No scrollable parent found for node: ");
+		return null;
 	}
 
 	// prepare direction argument
@@ -63,30 +64,31 @@ scrollInDirection(AccessibilityNodeInfo node, String direction) {
 	args.putInt("ACTION_ARGUMENT_DIRECTION_INT", dir_value);
 
 	// 16908384 = ACTION_SCROLL_IN_DIRECTION
-	boolean result = scrollNode.performAction(AccessibilityNodeInfoCompat.ACTION_SCROLL_IN_DIRECTION.getId(), args);
-scrollNode.refresh();
-	if (!result)
-		tasker.log("scrollInDirection failed for: " + value + " dir=", LOG_FILE);
-
+	boolean success = scrollNode.performAction(AccessibilityNodeInfoCompat.ACTION_SCROLL_IN_DIRECTION.getId(), args);
+	if (success) scrollNode.refresh();
 	if (stepDelay > 0) wait(stepDelay);
 	return scrollNode;
 }
 
+scrollInDirection(This multiKeys) {
+	return scrollInDirection(getNode(multiKeys), multiKeys.direction);
+}
+
 scrollInDirection(ArrayList nodes, String direction) {
 	AccessibilityNodeInfo node = toNode(nodes);
-	if (node == null) return;
+	if (node == null) return null;
 	return scrollInDirection(node);
 }
 
 scrollInDirection(HashMap nodes, String direction) {
 	AccessibilityNodeInfo node = toNode(nodes);
-	if (node == null) return;
+	if (node == null) return null;
 	return scrollInDirection(node);
 }
 
 scrollInDirection(HashMap nodes, String key, String direction) {
 	AccessibilityNodeInfo node = toNode(nodes, key);
-	if (node == null) return;
+	if (node == null) return null;
 	return scrollInDirection(node);
 }
 

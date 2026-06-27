@@ -1,6 +1,7 @@
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
+import bsh.This;
 
 /*─────────────────────────────────────────────────────────────── 
 This code was primarily generated using AI with minimal human editing.
@@ -30,11 +31,11 @@ Returns:
 paste(AccessibilityNodeInfo node) {
 	if (node == null) return null;
 	showOnScreen(node);
-	if (!node.isFocusable()) return;
+	if (!node.isFocusable()) return null;
 	focus(node);
 	debugMe(node);
-	node.performAction(AccessibilityNodeInfo.ACTION_PASTE);
-	node.refresh();
+	boolean success = node.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+	if (success) node.refresh();
 
 	if (stepDelay > 0) wait(stepDelay);
 
@@ -42,6 +43,10 @@ paste(AccessibilityNodeInfo node) {
 }
 
 /* Collection Overloads */
+paste(This multiKeys) {
+	return paste(getNode(multiKeys));
+}
+
 paste(ArrayList nodes) {
 	return paste(toNode(nodes));
 }

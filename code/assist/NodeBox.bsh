@@ -27,6 +27,8 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
+import android.view.accessibility.AccessibilityNodeInfo;
+import java.lang.reflect.Field;
 /*────────────────────────────────────────────────────────────────
 NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node)
 Custom class to manage the node box overlay for given node.
@@ -43,19 +45,36 @@ Returns:
 
 
 ──────────────────────────────────────────────────────────────── */
-
 NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
+	
 	final This TOP = this;
 	This a11Y = tasker.getJavaVariable("a11Y");
+	final int WINDOW_TYPE = ENV.Layout.TYPE_NODE_BOX;
+	a11Y.viewControl.addView(TOP);
+
 	setAlpha(int color, int alpha) {
 		return (alpha << 24) | (color & 0x00ffffff);
 	}
+	int displayId = nodeContext.display.displayId;
 	boolean useA11y = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY == overlayType ? true : false;
 	Runnable displayOverlay;
+	
+	int properties = NodeInfo.getProperties(node);
 
+	// Has viewIdResourceName
+	if (NodeInfo != void) {
+		if (node.viewIdResourceName != null) {
+			properties |= NodeInfo.HAS_VIEW_ID_RESOURCE_NAME;
+		}
+
+		// Has content description
+		if (node.contentDescription != null || node.text != null) {
+			properties |= NodeInfo.HAS_TEXT;
+		}
+	}
 
 	int getStatusBarHeight() {
-		if (DISPLAY_ID != 0) return 0;
+		if (displayId != 0) return 0;
 		int result = 0;
 		int resourceId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
 		if (resourceId > 0) result = context.getResources().getDimensionPixelSize(resourceId);
@@ -73,8 +92,8 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 			}
 		}
 	}
+
 	WindowManager WINDOW_MANAGER;
-	Context displayContext;
 	boolean isRemoved;
 	boolean isShown;
 	int DEFAULT_COLOR = Color.TRANSPARENT;
@@ -87,16 +106,21 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 	if (this.caller.nodeBoxColor != void) DEFAULT_COLOR = this.caller.nodeBoxColor;
 	if (this.caller.nodeBoxStrokeColor != void) DEFAULT_STROKE_COLOR = this.caller.nodeBoxStrokeColor;
 	if (this.caller.nodeBoxStrokeWidth != void) DEFAULT_STROKE_WIDTH = this.caller.nodeBoxStrokeWidth;
-
-	displayContext = getContext(overlayType);
-
-	View view = new View(displayContext);
+	
+	View view = new View(nodeContext);
 	Rect bounds = new Rect();
 	WindowManager.LayoutParams params;
 	FrameLayout.LayoutParams frameParams;
 
-	updateParams() {
-		node.refresh();
+	getContext() {
+		return nodeContext;
+	}
+	
+	updateParams(boolean refreshNode) {
+		if (refreshNode) { 
+			node.refresh();
+			properties = NodeInfo.getProperties(node);
+		}
 		node.getBoundsInScreen(bounds);
 		params = new WindowManager.LayoutParams(
 			bounds.width(),
@@ -114,9 +138,15 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 		frameParams.topMargin = bounds.top - getStatusBarHeight();
 	}
 
-	updateParams();
+	updateParams() {
+		updateParams(true);
+	}
+
+	// For initiatation
+	updateParams(false);
 
 	setColor(int strokeWidth, int strokeColor, int fillColor) {
+		unhide();
 		GradientDrawable activeFill = new GradientDrawable();
 		activeFill.setColor(fillColor);
 		activeFill.setStroke(strokeWidth, strokeColor);
@@ -128,11 +158,11 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 	}
 
 	isRemoved() {
-		return isRemoved;
+		return view.getParent() == null;
 	}
 
 	isShown() {
-		return isShown;
+		return view.getVisibility() == View.VISIBLE && !isRemoved();
 	}
 
 	setDefault() {
@@ -154,7 +184,7 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 	}
 
 	showInfo() {
-		infoToast = InfoToast(node, displayContext, overlayType);
+		infoToast = InfoToast(node, nodeContext, overlayType);
 	}
 
 	removeInfo() {
@@ -162,20 +192,33 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 	}
 
 	showDialog() {
-		infoDialog = InfoDialog(node, displayContext, overlayType);
+		infoDialog = InfoDialog(node, nodeContext, overlayType);
 	}
 
 	removeDialog() {
 		if (infoDialog != null) infoDialog.remove();
 	}
 
+	removeDialogAndInfo() {
+		try {
+			removeDialog();
+			removeInfo();
+		} catch (Exception e) {
+		}
+	}
+
 	hide() {
 		view.setVisibility(View.GONE);
 		removeInfo();
+		removeDialog();
 	}
 
 	unhide() {
 		view.setVisibility(View.VISIBLE);
+	}
+
+	isHidden() {
+		return view.getVisibility() == View.GONE && !isRemoved();
 	}
 
 	reset() {
@@ -201,11 +244,12 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 			isRemoved = true;
 			isShown = false;
 			a11Y.removeOverlay(TOP);
+			removeDialogAndInfo();
 		}
 	});
 
 	getWindowManager() {
-		if (WINDOW_MANAGER == null) WINDOW_MANAGER = (WindowManager) displayContext.getSystemService(Context.WINDOW_SERVICE);
+		if (WINDOW_MANAGER == null) WINDOW_MANAGER = (WindowManager) nodeContext.getSystemService(Context.WINDOW_SERVICE);
 		return WINDOW_MANAGER;
 	}
 
@@ -222,6 +266,7 @@ NodeBox(Context nodeContext, int overlayType, AccessibilityNodeInfo node) {
 			win.removeView(view);
 		}
 		removeInfo();
+		removeDialog();
 	}
 
 	remove() {

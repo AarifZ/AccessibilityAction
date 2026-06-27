@@ -307,7 +307,7 @@ AssistSetting() {
                 createSwitch("Include all methods for quick mode", "includeAllMethods");
                 createInput("Find hint duration (ms)", "findDelay", 100);
                 createInput("Debug highlight duration (ms)", "debugDelay", 1000);
-                Object envInput = createInput("Project Path", "ENV", a11Y.ENV);
+                Object envInput = createInput("Project Path", "ENV_PATH", a11Y.ENV_PATH);
                 if (envInput instanceof android.widget.EditText) {
                         ((EditText) envInput).setEnabled(false);
                 } else {

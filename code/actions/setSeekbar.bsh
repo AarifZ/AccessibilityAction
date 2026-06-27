@@ -8,6 +8,7 @@ import android.os.Bundle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import android.graphics.Point;
+import bsh.This;
 
 /*───────────────────────────────────────────────────────────────
 setSeekbar(...)
@@ -29,14 +30,14 @@ Arguments:
 setSeekbar(AccessibilityNodeInfo node, value) {
     if (node == null || node == void) return null;
 
-    arguments = new Bundle();
+    Bundle arguments = new Bundle();
     arguments.putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, (float) value);
     showOnScreen(node);
-    success = node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), arguments);
+    boolean success = node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), arguments);
 	if (!success) return null;
     if (stepDelay > 0) wait(stepDelay);
 
-    node.refresh();
+    if (success) node.refresh();
     return node;
 
 }
@@ -48,16 +49,20 @@ setSeekbar(AccessibilityNodeInfo node, int percentage) {
     RangeInfo rangeInfo = node.getRangeInfo();
     if (rangeInfo == null) return null;
 
-    min = rangeInfo.getMin();
-    max = rangeInfo.getMax();
+    float min = rangeInfo.getMin();
+    float max = rangeInfo.getMax();
 
     /* Calculate value: min + (percent * (max - min)) */
-    calculatedValue = min + ((float) percentage / 100.0 * (max - min));
+    float calculatedValue = min + ((float) percentage / 100.0 * (max - min));
     return setSeekbar(node, calculatedValue);
 
 }
 
 /* Collection Overloads */
+setSeekbar(This multiKeys) {
+	return setSeekbar(getNode(multiKeys), multiKeys.percentage);
+}
+
 setSeekbar(ArrayList nodes, value) {
     return setSeekbar(toNode(nodes), value);
 }

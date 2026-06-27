@@ -1,7 +1,5 @@
 /*──────────────────────────────────────────────────────────────
-	ThemeManager with Fallback Support
-	Uses Material Design 3 when available, falls back to standard colors
-	when Material Design library is not present (e.g. Tasker App Factory export)
+	This code was primarily generated using AI with minimal human editing.
   ────────────────────────────────────────────────────────────── */
 
 import android.content.Context;
@@ -9,12 +7,10 @@ import android.content.res.Resources;
 import android.view.ContextThemeWrapper;
 import android.util.TypedValue;
 import android.graphics.drawable.Drawable;
-import android.graphics.Color;
 
 /*───────────────────────────────────────────────────────────────
 	ThemeManager(Context ctx)
 	**Utility object for handling themes and styled attributes**
-	**With complete fallback to standard Android colors**
 
 	Parameters:
 		ctx: Context
@@ -29,40 +25,11 @@ import android.graphics.Color;
 		getAttr(int attr)
 		wrapper(String identifier) wrap context with a theme
 		attr(String attrName)
-		attr(int attr) resolve attribute with fallback colors
+		attr(int attr) resolve attribute and fallback to tasker
 
   ───────────────────────────────────────────────────────────────*/
 ThemeManager(Context ctx) {
 	ContextThemeWrapper THEME;
-	boolean isDarkTheme = true;
-
-	/* Check Material Design 3 availability */
-	CheckMaterial() {
-		try {
-			Class.forName("com.google.android.material.R$attr");
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
-	}
-
-	boolean hasMaterial3 = CheckMaterial();
-
-	/* Fallback color palettes */
-	final int FALLBACK_PRIMARY_DARK = Color.parseColor("#6200EA");
-	final int FALLBACK_SURFACE_DARK = Color.parseColor("#121212");
-	final int FALLBACK_ON_SURFACE_DARK = Color.parseColor("#FFFFFF");
-	final int FALLBACK_OUTLINE_DARK = Color.parseColor("#79747E");
-	final int FALLBACK_SECONDARY_DARK = Color.parseColor("#03DAC6");
-	final int FALLBACK_CONTAINER_DARK = Color.parseColor("#1F1F1F");
-
-	final int FALLBACK_PRIMARY_LIGHT = Color.parseColor("#6200EA");
-	final int FALLBACK_SURFACE_LIGHT = Color.parseColor("#FFFFFF");
-	final int FALLBACK_ON_SURFACE_LIGHT = Color.parseColor("#1C1B1F");
-	final int FALLBACK_OUTLINE_LIGHT = Color.parseColor("#C4C7C5");
-	final int FALLBACK_SECONDARY_LIGHT = Color.parseColor("#03DAC6");
-	final int FALLBACK_CONTAINER_LIGHT = Color.parseColor("#F5F5F5");
-
 	/* Wrap context with a theme */
 
 	getWrapperContext() {
@@ -77,77 +44,44 @@ ThemeManager(Context ctx) {
 	}
 
 	ContextThemeWrapper wrapper(String identifier) {
-		try {
-			Context useCtx = getWrapperContext();
-			Resources res = ctx.getResources();
-			String pkg = ctx.getPackageName();
-			int themeId = res.getIdentifier(identifier, "style", pkg);
-			if (themeId == 0) throw new Exception("Theme not found");
-			return new ContextThemeWrapper(ctx, themeId);
-		} catch (Exception e) {
-			tasker.log("Theme wrapper fallback: " + identifier);
-			return null;
-		}
+		Context useCtx = getWrapperContext();
+		Resources res = ctx.getResources();
+		String pkg = ctx.getPackageName();
+		int themeId = res.getIdentifier(identifier, "style", pkg);
+		return new ContextThemeWrapper(ctx, themeId);
 	}
 
 	setWrapperContext(String identifier) {
-		try {
-			ContextThemeWrapper newWrapper = wrapper(identifier);
-			if (newWrapper != null) THEME = newWrapper;
-			return newWrapper;
-		} catch (Exception e) {
-			return null;
-		}
+		ContextThemeWrapper newWrapper = wrapper(identifier);
+		THEME = newWrapper;
+		return newWrapper;
 	}
 
 	/* Apply theme to current context */
 	setTheme(String identifier) {
-		try {
-			Resources res = ctx.getResources();
-			String pkg = ctx.getPackageName();
-			int themeId = res.getIdentifier(identifier, "style", pkg);
-			if (themeId != 0) ctx.setTheme(themeId);
-		} catch (Exception e) {
-			tasker.log("Theme set failed: " + identifier);
-		}
+		Resources res = ctx.getResources();
+		String pkg = ctx.getPackageName();
+		int themeId = res.getIdentifier(identifier, "style", pkg);
+		if (themeId != 0) ctx.setTheme(themeId);
 	}
 
 	setThemeDark() {
-		isDarkTheme = true;
-		if (hasMaterial3) {
-			setTheme("Theme.Material3.DynamicColors.Dark");
-		} else {
-			tasker.log("Using dark theme fallback (no Material Design)");
-		}
+		setTheme("Theme.Material3.DynamicColors.Dark");
 	}
 
 	setThemeLight() {
-		isDarkTheme = false;
-		if (hasMaterial3) {
-			setTheme("Theme.Material3.DynamicColors.Light");
-		} else {
-			tasker.log("Using light theme fallback (no Material Design)");
-		}
+		setTheme("Theme.Material3.DynamicColors.Light");
 	}
 
 	setThemeDayNight() {
-		if (hasMaterial3) {
-			setTheme("Theme.Material3.DynamicColors.DayNight");
-		} else {
-			isDarkTheme = true;
-			setThemeDark();
-		}
+		setTheme("Theme.Material3.DynamicColors.DayNight");
 	}
 
 	/* Get theme resource id */
 	int getThemeId(String identifier) {
-		try {
-			Resources res = ctx.getResources();
-			String pkg = ctx.getPackageName();
-			return res.getIdentifier(identifier, "style", pkg);
-		} catch (Exception e) {
-			return 0;
-		}
+		Resources res = ctx.getResources();
+		String pkg = ctx.getPackageName();
+		return res.getIdentifier(identifier, "style", pkg);
 	}
 
 	/* Check if theme exists */
@@ -157,191 +91,151 @@ ThemeManager(Context ctx) {
 
 	/* Resolve color attribute */
 	int getColorAttr(int attr) {
-		try {
-			TypedValue tv = new TypedValue();
-			ctx.getTheme().resolveAttribute(attr, tv, true);
-			return tv.data;
-		} catch (Exception e) {
-			return isDarkTheme ? FALLBACK_PRIMARY_DARK : FALLBACK_PRIMARY_LIGHT;
-		}
+		TypedValue tv = new TypedValue();
+		ctx.getTheme().resolveAttribute(attr, tv, true);
+		return tv.data;
 	}
 
 	/* Resolve dimension attribute (px) */
 	float getDimenAttr(int attr) {
-		try {
-			TypedValue tv = new TypedValue();
-			ctx.getTheme().resolveAttribute(attr, tv, true);
-			return TypedValue.complexToDimension(tv.data, ctx.getResources().getDisplayMetrics());
-		} catch (Exception e) {
-			return 0f;
-		}
+		TypedValue tv = new TypedValue();
+		ctx.getTheme().resolveAttribute(attr, tv, true);
+		return TypedValue.complexToDimension(tv.data, ctx.getResources().getDisplayMetrics());
 	}
 
 	/* Resolve drawable attribute */
 	Drawable getDrawableAttr(int attr) {
-		try {
-			TypedValue tv = new TypedValue();
-			ctx.getTheme().resolveAttribute(attr, tv, true);
-			return ctx.getResources().getDrawable(tv.resourceId);
-		} catch (Exception e) {
-			return null;
-		}
+		TypedValue tv = new TypedValue();
+		ctx.getTheme().resolveAttribute(attr, tv, true);
+		return ctx.getResources().getDrawable(tv.resourceId);
 	}
 
 	/* Resolve resource id from attribute */
 	int getAttr(int attr) {
-		try {
-			TypedValue tv = new TypedValue();
-			ctx.getTheme().resolveAttribute(attr, tv, true);
-			return tv.resourceId;
-		} catch (Exception e) {
-			return 0;
-		}
+		TypedValue tv = new TypedValue();
+		ctx.getTheme().resolveAttribute(attr, tv, true);
+		return tv.resourceId;
 	}
 
 	/* Check if attribute exists */
 	boolean hasAttr(int attr) {
-		try {
-			TypedValue tv = new TypedValue();
-			return ctx.getTheme().resolveAttribute(attr, tv, true);
-		} catch (Exception e) {
-			return false;
-		}
+		TypedValue tv = new TypedValue();
+		return ctx.getTheme().resolveAttribute(attr, tv, true);
 	}
 
 	/* Apply style on top of current theme */
 	applyStyle(String identifier, boolean force) {
-		try {
-			int themeId = getThemeId(identifier);
-			if (themeId != 0) {
-				ctx.getTheme().applyStyle(themeId, force);
-			}
-		} catch (Exception e) {}
+		int themeId = getThemeId(identifier);
+		if (themeId != 0) {
+			ctx.getTheme().applyStyle(themeId, force);
+		}
 	}
 
 	/* Clone context with applied style */
 	ContextThemeWrapper cloneWithStyle(String identifier) {
-		try {
-			ContextThemeWrapper w = wrapper(identifier);
-			return w;
-		} catch (Exception e) {
-			return null;
-		}
+		ContextThemeWrapper w = wrapper(identifier);
+		return w;
 	}
 
 	int getColor(String id) {
-		try {
-			Context useCtx = getWrapperContext();
-			Resources res = useCtx.getResources();
-			int resId = res.getIdentifier(id, "color", "android");
-			if (resId == 0) resId = res.getIdentifier(id, "color", useCtx.getPackageName());
-			if (resId == 0) return FALLBACK_PRIMARY_DARK;
-			return res.getColor(resId);
-		} catch (Exception e) {
-			return FALLBACK_PRIMARY_DARK;
-		}
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int resId = res.getIdentifier(id, "color", "android");
+		int colorInt = res.getColor(resId);
+		return colorInt;
 	}
 
-	/* Resolve attribute name with comprehensive fallback */
+
+	/* Check if theme exists */
+	boolean themeExists(String identifier) {
+		return getThemeId(identifier) != 0;
+	}
+
 	attr(String attrName) {
-		try {
-			Context useCtx = getWrapperContext();
-			Resources res = useCtx.getResources();
-			int attrId = res.getIdentifier(attrName, "attr", useCtx.getPackageName());
-			
-			/* Try Material Design attributes */
-			if (attrId == 0 && hasMaterial3) {
-				attrId = res.getIdentifier(attrName, "attr", "com.google.android.material");
-			}
-
-			if (attrId == 0) {
-				/* Use fallback colors based on attribute name */
-				if (attrName.contains("colorPrimary")) {
-					return isDarkTheme ? FALLBACK_PRIMARY_DARK : FALLBACK_PRIMARY_LIGHT;
-				} else if (attrName.contains("colorSurface")) {
-					return isDarkTheme ? FALLBACK_SURFACE_DARK : FALLBACK_SURFACE_LIGHT;
-				} else if (attrName.contains("colorOnSurface")) {
-					return isDarkTheme ? FALLBACK_ON_SURFACE_DARK : FALLBACK_ON_SURFACE_LIGHT;
-				} else if (attrName.contains("colorSecondary")) {
-					return isDarkTheme ? FALLBACK_SECONDARY_DARK : FALLBACK_SECONDARY_LIGHT;
-				} else if (attrName.contains("colorOutline")) {
-					return isDarkTheme ? FALLBACK_OUTLINE_DARK : FALLBACK_OUTLINE_LIGHT;
-				} else if (attrName.contains("colorContainer") || attrName.contains("colorSurfaceContainerHigh")) {
-					return isDarkTheme ? FALLBACK_CONTAINER_DARK : FALLBACK_CONTAINER_LIGHT;
-				}
-				/* Try looking up as a drawable in the package context */
-				try {
-					String pkg = useCtx.getPackageName();
-					Context taskerContext = useCtx.createPackageContext(pkg, Context.CONTEXT_IGNORE_SECURITY);
-					int resId = taskerContext.getResources().getIdentifier(attrName, "drawable", pkg);
-					if (resId != 0) {
-						return taskerContext.getResources().getDrawable(resId);
-					}
-				} catch (Exception e2) {}
-				return isDarkTheme ? FALLBACK_PRIMARY_DARK : FALLBACK_PRIMARY_LIGHT;
-			}
-
-			TypedValue tv = new TypedValue();
-			boolean found = useCtx.getTheme().resolveAttribute(attrId, tv, true);
-			if (!found) return null;
-
-			if (tv.isColorType()) {
-				return tv.data;
-			}
-
-			if (tv.resourceId != 0) {
-				try {
-					Drawable d = useCtx.getDrawable(tv.resourceId);
-					if (d != null) return d;
-				} catch (Exception e) {}
-				return tv.resourceId;
-			}
-
-			switch (tv.type) {
-				case TypedValue.TYPE_INT_BOOLEAN:
-					return tv.data != 0;
-				case TypedValue.TYPE_DIMENSION:
-					return TypedValue.complexToDimension(tv.data, res.getDisplayMetrics());
-				case TypedValue.TYPE_FLOAT:
-					return Float.intBitsToFloat(tv.data);
-				case TypedValue.TYPE_INT_DEC:
-				case TypedValue.TYPE_INT_HEX:
-					return tv.data;
-			}
-			return tv;
-		} catch (Exception e) {
-			/* Ultimate fallback */
-			if (attrName.contains("colorPrimary")) {
-				return isDarkTheme ? FALLBACK_PRIMARY_DARK : FALLBACK_PRIMARY_LIGHT;
-			}
-			if (attrName.contains("colorSurface")) {
-				return isDarkTheme ? FALLBACK_SURFACE_DARK : FALLBACK_SURFACE_LIGHT;
-			}
-			if (attrName.contains("colorOnSurface")) {
-				return isDarkTheme ? FALLBACK_ON_SURFACE_DARK : FALLBACK_ON_SURFACE_LIGHT;
-			}
-			if (attrName.contains("colorSecondary")) {
-				return isDarkTheme ? FALLBACK_SECONDARY_DARK : FALLBACK_SECONDARY_LIGHT;
-			}
-			if (attrName.contains("colorOutline")) {
-				return isDarkTheme ? FALLBACK_OUTLINE_DARK : FALLBACK_OUTLINE_LIGHT;
-			}
-			return isDarkTheme ? FALLBACK_SURFACE_DARK : FALLBACK_SURFACE_LIGHT;
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int attrId = res.getIdentifier(attrName, "attr", useCtx.getPackageName());
+		if (attrId == 0) {
+			attrId = res.getIdentifier(attrName, "attr", "com.google.android.material");
 		}
-	}
 
+		if (attrId == 0) {
+			String pkg = useCtx.getPackageName();
+			Context taskerContext = useCtx.createPackageContext(pkg, Context.CONTEXT_IGNORE_SECURITY);
+			int resId = taskerContext.getResources().getIdentifier(attrName, "drawable", pkg);
+			if (resId == 0) {
+				tasker.log("Resource not found: " + attrName);
+				return null;
+			}
+			return taskerContext.getResources().getDrawable(resId);
+		}
+
+		TypedValue tv = new TypedValue();
+		boolean found = useCtx.getTheme().resolveAttribute(attrId, tv, true);
+		if (!found) return null;
+
+		if (tv.isColorType()) {
+			return tv.data;
+		}
+
+		if (tv.resourceId != 0) {
+			try {
+				Drawable d = useCtx.getDrawable(tv.resourceId);
+				if (d != null) return d;
+			} catch (Exception e) {}
+			return tv.resourceId;
+		}
+
+		switch (tv.type) {
+			case TypedValue.TYPE_INT_BOOLEAN:
+				return tv.data != 0;
+			case TypedValue.TYPE_DIMENSION:
+				return TypedValue.complexToDimension(tv.data, res.getDisplayMetrics());
+			case TypedValue.TYPE_FLOAT:
+				return Float.intBitsToFloat(tv.data);
+			case TypedValue.TYPE_INT_DEC:
+			case TypedValue.TYPE_INT_HEX:
+				return tv.data;
+		}
+		return tv;
+	}
 
 	int color(String id) {
-		try {
-			Context useCtx = getWrapperContext();
-			Resources res = useCtx.getResources();
-			int resId = res.getIdentifier(id, "color", "android");
-			if (resId == 0) resId = res.getIdentifier(id, "color", useCtx.getPackageName());
-			if (resId == 0) return FALLBACK_PRIMARY_DARK;
-			return res.getColor(resId);
-		} catch (Exception e) {
-			return FALLBACK_PRIMARY_DARK;
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int resId = res.getIdentifier(id, "color", "android");
+		int colorInt = res.getColor(resId);
+		return colorInt;
+	}
+
+	int color(String attrName, boolean useFallback) {
+		if (useFallback) {
+			This a11Y = tasker.getJavaVariable("a11Y");
+			return a11Y.materialColorFallback.color(attrName);
 		}
+		
+		Context useCtx = getWrapperContext();
+		Resources res = useCtx.getResources();
+		int attrId = res.getIdentifier(attrName, "attr", useCtx.getPackageName());
+		if (attrId == 0) {
+			attrId = res.getIdentifier(attrName, "attr", "com.google.android.material");
+		}
+		TypedValue tv = new TypedValue();
+		boolean found = useCtx.getTheme().resolveAttribute(attrId, tv, true);
+		if (!found) return 0;
+		if (tv.isColorType()) {
+			return tv.data;
+		} else {
+			return 0;
+		}
+	}
+
+	int color(String attrName) {
+		boolean useFallback = true;
+		if (ENV != void) {
+			useFallback = !ENV.HAS_MATERIAL_COLOR;
+		}
+		return color(attrName, useFallback);
 	}
 
 	setAlpha(int color, int alpha) {

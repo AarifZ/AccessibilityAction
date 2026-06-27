@@ -5,6 +5,7 @@ This code was primarily generated using AI with minimal human editing.
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
+import bsh.This;
 
 /*───────────────────────────────────────────────────────────────
 contextClick(...)
@@ -28,18 +29,26 @@ Returns:
 
 /* Base Context Click Logic */
 contextClick(AccessibilityNodeInfo node) {
+	while (node != null && !node.isContextClickable()) {
+		node = node.getParent();
+	}
 	if (node == null) return null;
 
 	showOnScreen(node);
-	node.performAction(AccessibilityNodeInfo.ACTION_CONTEXT_CLICK);
+	boolean success = node.performAction(AccessibilityNodeInfo.ACTION_CONTEXT_CLICK);
 
 	if (stepDelay > 0) wait(stepDelay);
-	node.refresh();
+	if (success) node.refresh();
 	return node;
 
 }
 
+
 /* Collection Overloads */
+contextClick(This multiKeys) {
+	return contextClick(getNode(multiKeys));
+}
+
 contextClick(ArrayList nodes) {
 	return contextClick(toNode(nodes));
 }
