@@ -176,11 +176,11 @@ a11Y() {
 	}
 
 	showAssist() {
-		if (!assistBar.isShown) assistBar.show();
+		if (assistBar != null && assistBar != void && !assistBar.isShown) assistBar.show();
 	}
 
 	removeAssist() {
-		if (assistBar.isShown) assistBar.remove();
+		if (assistBar != null && assistBar != void && assistBar.isShown) assistBar.remove();
 	}
 
 	update() {
