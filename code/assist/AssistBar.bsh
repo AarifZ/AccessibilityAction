@@ -17,6 +17,7 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.view.Display;
 import com.joaomgcd.taskerm.action.java.JavaCodeException;
 import android.accessibilityservice.AccessibilityService;
@@ -200,7 +201,9 @@ public This AssistBar(int initialX, int initialY) {
 	IconButton(Drawable drawable, boolean isActive) {
 		ImageButton button = new ImageButton(assistContext);
 		button.setImageDrawable(drawable);
-		button.setScaleType(ImageButton.ScaleType.CENTER);
+		// ScaleType is declared on ImageView; Tasker's BeanShell can't resolve
+		// nested classes through inheritance (ImageButton.ScaleType fails)
+		button.setScaleType(ImageView.ScaleType.CENTER);
 		button.setMinimumWidth(0);
 		button.setMinimumHeight(0);
 		button.setMaxWidth(dp(40));
@@ -599,15 +602,18 @@ public This AssistBar(int initialX, int initialY) {
 	show() {
 		// Build atomically: a half-built overlay (e.g. accessibility service
 		// not active during create()) must not leave handleGesture null for
-		// the posted Runnable to NPE on.
-		if (assistButton == null || handleGesture == null) {
+		// the posted Runnable to NPE on. handle == null means a previous
+		// addButtons() died partway — rebuild everything from scratch.
+		if (assistButton == null || handle == null || handleGesture == null) {
 			try {
-				if (assistButton == null) {
+				if (assistButton == null || handle == null) {
 					create();
 					addButtons();
 				}
 				addListenerAndGesture();
 			} catch (e) {
+				assistButton = null;
+				handleGesture = null;
 				log("AssistBar build failed: " + e.getMessage(), "ERROR");
 				tasker.showToast("Can't show assist overlay: " + e.getMessage());
 				return;
