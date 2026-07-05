@@ -1,5 +1,6 @@
 String ENV_PATH = new File(getSourceFileInfo()).getParentFile().getAbsolutePath();
-addClassPath(ENV_PATH);
+cd(ENV_PATH);
+addClassPath(".");
 importCommands("lib");
 importCommands("lib.file");
 importCommands("main");
@@ -16,13 +17,52 @@ import java.lang.reflect.Field;
 import android.os.Handler;
 import android.os.Looper;
 
+ENV = Environment();
+
 a11Y() {
+	// Merged safe defaults from fixed/v33 fallback
+	boolean debugSteps = false;
+	boolean debugMe = false;
+	boolean debugInfo = true;
+	long findDelay = 100;
+	long debugDelay = 1000;
+	long stepDelay = 50;
+	long waitNodesTimeout = 10000;
+	List assistOverlays = new ArrayList();
+	This ENV;
+	String ENV_PATH;
+	String LOG_FILE;
+	long lastActionPickerReminder = 0;
+	This updateManager;
+	This materialColorFallback;
+	This displayInfos;
+	String scriptEditor = "";
+	This inspector;
+	This NodeInfo;
+	This config;
+	Handler mainHandler = new Handler(Looper.getMainLooper());
+	This assistBar;
+	This assistButton;
+	boolean useOffset = true;
+	boolean useA11yOffset = true;
+	boolean waitNodes = true;
+	boolean useA11yStructure = false;
+	boolean includeAllMethods = false;
+	boolean quickAddMode = true;
+	boolean updatePreRelease = false;
+	boolean useColorFallback = false;
+	long actionPickerReminderDelay = 120000;
+
+	double scaleFactor = 1;
+	boolean hasMaterial = false;
+	boolean actionsInitialized = false;
+
 	// Retrieve the previous instance from Tasker's memory
-	This old = tasker.getJavaVariable("a11Y");
+	old = getA11yInstance();
 	if (old != null) {
 		try {
-			boolean hasRemoveBoolean = old.namespace.getMethod("remove", new Class[] { Boolean.class } ) != null;
-			boolean hasRemove = old.namespace.getMethod("remove", new Class[] { } ) != null ;
+			boolean hasRemoveBoolean = old.namespace.getMethod("remove", new Class[] { Boolean.class }) != null;
+			boolean hasRemove = old.namespace.getMethod("remove", new Class[] {}) != null;
 			if (hasRemoveBoolean) {
 				old.remove(false);
 			} else if (hasRemove) {
@@ -37,23 +77,6 @@ a11Y() {
 	}
 
 	final This TOP = this;
-
-	// Variables
-	List assistOverlays = new ArrayList();
-	This ENV;
-	String ENV_PATH;
-	String LOG_FILE;
-	long lastActionPickerReminder = 0;
-
-	This assistBar;
-	This updateManager;
-	This materialColorFallback;
-	This displayInfos;
-	String scriptEditor = "";
-	This inspector;
-	This NodeInfo;
-	This config;
-	Handler mainHandler = new Handler(Looper.getMainLooper());
 
 	ThreadFactory customThreadFactory = new ThreadFactory() {
 		private AtomicInteger count = new AtomicInteger(0);
@@ -176,11 +199,11 @@ a11Y() {
 	}
 
 	showAssist() {
-		if (assistBar != null && assistBar != void && !assistBar.isShown) assistBar.show();
+		if (!assistBar.isShown) assistBar.show();
 	}
 
 	removeAssist() {
-		if (assistBar != null && assistBar != void && assistBar.isShown) assistBar.remove();
+		if (assistBar.isShown) assistBar.remove();
 	}
 
 	update() {
@@ -273,7 +296,7 @@ a11Y() {
 		tasker.setJavaVariable("a11E", null);
 		if (clearA11Y) tasker.setJavaVariable("a11Y", null);
 	}
-	
+
 	remove() {
 		remove(true);
 	}
@@ -300,56 +323,57 @@ a11Y() {
 };
 
 log("Initializing a11Y");
-This a11Y = a11Y();
+a11Y = a11Y();
 a11Y.setEnvPath(ENV_PATH);
-LOG_FILE = ENV_PATH + "/log.txt";
-
-This ENV = Environment();
 a11Y.setEnv(ENV);
 
-This viewControl = ViewControl();
+viewControl = ViewControl();
 a11Y.namespace.setVariable("viewControl", viewControl, false);
 
-This config = Config(ENV_PATH + "/config.java");
+config = Config(ENV_PATH + "/config.java");
 config.load();
 config.setTo(a11Y);
 
 a11Y.namespace.setVariable("config", config, false);
 a11Y.set();
 
-This inspector = MethodInspector(this);
+inspector = MethodInspector(this);
 inspector.read();
 a11Y.inspector = inspector;
 tasker.setJavaVariable("a11Y", a11Y);
 
-This a11yController = A11yController();
+a11yController = A11yController();
 a11Y.namespace.setVariable("a11yController", a11yController, false);
 
-This a11E = a11E();
+a11E = a11E();
 tasker.setJavaVariable("a11E", a11E);
 
-This NodeInfo = NodeInfo();
+NodeInfo = NodeInfo();
 a11Y.namespace.setVariable("NodeInfo", NodeInfo, false);
 
-This updateManager = UpdateManager();
+updateManager = UpdateManager();
 updateManager.namespace.setVariable("directoryPath", ENV_PATH, false);
 a11Y.namespace.setVariable("updateManager", updateManager, false);
 
-This packageManager = PackageManager();
+packageManager = PackageManager();
 a11Y.namespace.setVariable("packageManager", packageManager, false);
 
 // Limit following methods and scripted objects to Tasker app
-if (!ENV.HAS_MATERIAL_LIB) {
-	tasker.showToast("Material library not found; using Android framework fallback UI where available.", "AccessibilityAction Kid App fallback");
-}
+if (!ENV.HAS_MATERIAL_LIB) return;
 
-This assistBar = AssistBar(0.8, 0.8);
+assistBar = AssistBar(0.8, 0.8);
 a11Y.namespace.setVariable("assistBar", assistBar, false);
 
 if (!ENV.HAS_MATERIAL_COLOR && ENV.HAS_MATERIAL_COLOR_FALLBACK) {
-	This mcf = MaterialColorFallback();
-	mcf.load();
-	log("Using fallback material color.");
+	mcf = MaterialColorFallback();
+	a11Y.namespace.setVariable("materialColorFallback", mcf, false);
+	try {
+		mcf.load();
+		log("Using fallback material color.");
+	} catch (e) {
+		// Init must still reach the start command; baked-in defaults remain usable
+		log("Material color fallback load failed: " + e.getMessage(), "ERROR");
+	}
 	tasker.showToast("Can't find material color via ThemeManager.color(String). Will try to use a fallback that doesn't match the theme.\n\nAccessibility actions still can be used.", "Assist & Debug features may not work.");
 }
 

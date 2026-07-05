@@ -211,6 +211,7 @@ ThemeManager(Context ctx) {
 	int color(String attrName, boolean useFallback) {
 		if (useFallback) {
 			This a11Y = tasker.getJavaVariable("a11Y");
+			if (a11Y == null || a11Y.materialColorFallback == void || a11Y.materialColorFallback == null) return 0;
 			return a11Y.materialColorFallback.color(attrName);
 		}
 		

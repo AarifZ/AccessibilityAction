@@ -247,8 +247,14 @@ MaterialColorFallback() {
 	int getColor(String id) {
 		res = context.getResources();
 		int resId = res.getIdentifier(id, "color", "android");
-		int colorInt = res.getColor(resId);
-		return colorInt != 0 ? colorInt : getFallback(id);
+		// Tokens like system_surface_container_*_dark only exist on API 34+;
+		// 0 keeps the baked-in default from load()
+		if (resId == 0) return 0;
+		try {
+			return res.getColor(resId);
+		} catch (Exception e) {
+			return 0;
+		}
 	}
 
 	load() {
