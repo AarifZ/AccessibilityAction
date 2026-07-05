@@ -282,7 +282,12 @@ ThisManager(This THIS) {
 	make(String regexFilter, int recursiveLevel, boolean returnfileName) {
 		List files = getFiles(classPath, regexFilter, true, recursiveLevel, returnfileName);
 		for (String file: files) {
-			this.interpreter.source(file);
+			// One unparseable file must not abort the whole init
+			try {
+				this.interpreter.source(file);
+			} catch (Exception e) {
+				try { log("ThisManager: skipping " + file + " : " + e.getMessage(), "ERROR"); } catch (e2) {}
+			}
 		}
 
 		Collections.sort(files, String.CASE_INSENSITIVE_ORDER);
