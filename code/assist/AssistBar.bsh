@@ -597,17 +597,33 @@ public This AssistBar(int initialX, int initialY) {
 	}
 
 	show() {
-		if (assistButton == null) {
-			create();
-			addButtons();
-			addListenerAndGesture();
+		// Build atomically: a half-built overlay (e.g. accessibility service
+		// not active during create()) must not leave handleGesture null for
+		// the posted Runnable to NPE on.
+		if (assistButton == null || handleGesture == null) {
+			try {
+				if (assistButton == null) {
+					create();
+					addButtons();
+				}
+				addListenerAndGesture();
+			} catch (e) {
+				log("AssistBar build failed: " + e.getMessage(), "ERROR");
+				tasker.showToast("Can't show assist overlay: " + e.getMessage());
+				return;
+			}
 		}
 		Runnable displayOverlay = new Runnable() {
 			run() {
-				if (detector == null) {
-					detector = handleGesture.getDetector();
+				try {
+					if (detector == null && handleGesture != null) {
+						detector = handleGesture.getDetector();
+					}
+					windowManager.addView(assistButton, assistParams);
+				} catch (e) {
+					// Never crash the app from the main thread
+					log("AssistBar display failed: " + e.getMessage(), "ERROR");
 				}
-				windowManager.addView(assistButton, assistParams);
 			}
 		};
 		if (!isShown) mainHandler.post(displayOverlay);
